@@ -504,24 +504,19 @@ router.put(
   }
 );
 
-// List pages for a booklet
-router.get(
-  '/booklets/:id/pages',
-  authenticate,
-  authorize(['ADMIN']),
-  async (req, res, next) => {
-    try {
-      const { id } = req.params;
-      const result = await db.query(
-        'SELECT * FROM education_corner_booklet_pages WHERE booklet_id = $1 ORDER BY page_number ASC',
-        [id]
-      );
-      res.json({ success: true, data: result.rows.map(mapBookletPageRow) });
-    } catch (err) {
-      next(err);
-    }
+// List pages for a booklet (public)
+router.get('/booklets/:id/pages', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const result = await db.query(
+      'SELECT * FROM education_corner_booklet_pages WHERE booklet_id = $1 ORDER BY page_number ASC',
+      [id]
+    );
+    res.json({ success: true, data: result.rows.map(mapBookletPageRow) });
+  } catch (err) {
+    next(err);
   }
-);
+});
 
 // Create page  ✅ FIXED (transaction + deferred constraints + keep count in sync)
 router.post(
