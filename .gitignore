@@ -55,8 +55,9 @@ frontend/public/uploads/
 tmp/
 temp/
 
-# Secrets / keys
-backend/*.json
+# Secrets / key
+backend/db/*.json
+backend/**/seed*.json
 backend/**/formal-fragment-*.json
 *.key
 *.pem
