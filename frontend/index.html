@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>San Fabian Office of Population</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+      crossorigin="anonymous"
+    />
+    <!-- Font Awesome Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+      integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkfQjbjv+BmG1x1o1x0SAtf5NCzlyL+G9PZZgFZ3jZ1S3YFh8C+R2G6JQ=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <!-- Global font overrides for consistent typography -->
+    <style>
+      :root {
+        --sf-font: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+      }
+      html, body { font-family: var(--sf-font); }
+      h1, h2, h3, h4, h5, h6 { font-weight: 700; }
+      .nav-link { font-weight: 500; }
+      .navbar-nav .nav-link { padding-left: 0.75rem; padding-right: 0.75rem; letter-spacing: 0.2px; }
+      .navbar .nav-link { transition: color 180ms ease, transform 180ms ease; }
+      .navbar .nav-link:hover { color: #0d6efd; transform: translateY(-1px); }
+
+      /* Header animation (applies to Mantine AppShell header and Bootstrap navbar) */
+      @keyframes headerFadeSlide {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      header, .navbar {
+        animation: headerFadeSlide 600ms ease-out both;
+      }
+
+      /* Hide scrollbars globally while preserving scroll behavior */
+      html, body {
+        -ms-overflow-style: none; /* IE and Edge */
+        scrollbar-width: none;    /* Firefox */
+      }
+      html::-webkit-scrollbar,
+      body::-webkit-scrollbar {
+        display: none; /* Chrome, Safari, Opera */
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+    <!-- Bootstrap JS (for navbar toggle etc.) -->
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+      crossorigin="anonymous"
+    ></script>
+  </body>
+</html>

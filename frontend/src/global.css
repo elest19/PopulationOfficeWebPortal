@@ -1,0 +1,86 @@
+/* Global holographic card hover effect */
+
+.holographic-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 15px;
+  transition: all 0.5s ease;
+}
+
+.holographic-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 20px rgba(0, 86, 247, 0.6);
+  transition: all 0.5s ease;
+  opacity: 0;
+  z-index: 0; /* keep glow behind content */
+}
+
+.holographic-card:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 20px rgba(9, 67, 175, 0.986);
+}
+
+.holographic-card:hover::before {
+  opacity: 1;
+}
+
+/* Ensure card content stays above the glow */
+.holographic-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Generic hover glow for primary interactive elements */
+button,
+input[type='button'],
+input[type='submit'],
+.btn,
+.mantine-Button-root,
+.card.holographic-card {
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+button:hover,
+input[type='button']:hover,
+input[type='submit']:hover,
+.btn:hover,
+.mantine-Button-root:hover,
+.card.holographic-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 12px rgba(9, 67, 175, 0.55);
+}
+
+/* Hover effect for admin sidebar tabs */
+.admin-sidebar-link {
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.admin-sidebar-link:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 10px rgba(148, 163, 184, 0.6);
+}
+
+/* Center all Mantine table headers (used heavily in admin dashboard tables) */
+.mantine-Table-th {
+  text-align: center;
+}
+
+/* News detail - Edit modal */
+.news-edit-modal-content {
+  background-color: #ffffff !important;
+  border-radius: 12px;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.25);
+  overflow: hidden;
+}
+
+.news-edit-modal-body {
+  background-color: #ffffff !important;
+  padding: 0 !important; /* we handle padding inside the modal layout */
+}
+
+.news-edit-modal-header {
+  background-color: #ffffff !important;
+}
