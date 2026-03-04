@@ -1128,28 +1128,7 @@ export function CalendarPage() {
                     </Group>
                   )}
 
-                  {isAdmin && (
-                    <>
-                      <Divider label="Admin Controls" labelPosition="center" />
-                      <SimpleGrid cols={3} spacing="xs">
-                        <p></p>
-                        <Button
-                          color="red"
-                          variant="light"
-                          onClick={() => setDeleteEventId(ev.id)}
-                        >
-                          Delete
-                        </Button>
-                        <Button
-                          color="orange"
-                          variant="light"
-                          onClick={() => setCancelEventId(ev.id)}
-                        >
-                          Cancel
-                        </Button>
-                      </SimpleGrid>
-                    </>
-                  )}
+                  {/* Admin Controls removed for public calendar view */}
                 </Stack>
               );
             })()
