@@ -5,6 +5,7 @@ const config = require('./config/env');
 const { startFamilyPlanningReminderJob } = require('./jobs/familyPlanningReminders');
 const { startUsapanReminderJob } = require('./jobs/usapanReminders');
 const { startPmoReminderJob } = require('./jobs/pmoReminders');
+const { startFileTaskOverdueReminderJob } = require('./jobs/fileTaskOverdueReminders');
 
 const port = config.port;
 
@@ -32,6 +33,7 @@ app.set('io', io);
 startFamilyPlanningReminderJob();
 startUsapanReminderJob();
 startPmoReminderJob();
+startFileTaskOverdueReminderJob();
 
 server.listen(port, () => {
   console.log(`Server listening on port ${port}`);
