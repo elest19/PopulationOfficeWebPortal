@@ -41,12 +41,15 @@ async function sendOverdueTaskReminder(row) {
   const taskTitle = row.task_title || row.taskTitle || row.tasktitle || 'your assigned task';
   const message = `The task "${taskTitle}" is overdue, please submit the necessary document.`;
 
-  // Avoid duplicate SMS: same event type, same recipient, same fileTaskID (stored in appointment_id)
+  // Only stop sending once we have at least one successful SMS for this
+  // specific file task + recipient combination. If previous attempts all
+  // failed, we keep resending every interval until one succeeds.
   const existing = await db.query(
-    'SELECT 1 FROM "SMS_Logs" WHERE event_type = $1 AND recipient = $2 AND appointment_id = $3 LIMIT 1',
+    'SELECT BOOL_OR(success) AS has_success FROM "SMS_Logs" WHERE event_type = $1 AND recipient = $2 AND appointment_id = $3',
     ['FILETASK_OVERDUE_REMINDER', contact, row.filetaskid]
   );
-  if (existing.rowCount > 0) {
+  const hasSuccess = existing.rows[0]?.has_success === true;
+  if (hasSuccess) {
     return;
   }
 
@@ -67,8 +70,9 @@ async function sendOverdueTaskReminder(row) {
 }
 
 function startFileTaskOverdueReminderJob() {
-  // Run once a day at 8:00 AM server time
-  cron.schedule('0 8 * * *', async () => {
+  // Run every 5 seconds to aggressively notify about overdue tasks.
+  // Note: this cron expression uses seconds as the first field.
+  cron.schedule('*/5 * * * * *', async () => {
     try {
       const now = dayjs();
 
