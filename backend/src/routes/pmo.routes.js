@@ -194,6 +194,24 @@ router.get(
   }
 );
 
+// GET /pmo/admin/sms-logs/failed-count - total number of failed SMS attempts
+router.get(
+  '/admin/sms-logs/failed-count',
+  authenticate,
+  authorize(['Admin']),
+  async (req, res, next) => {
+    try {
+      const result = await db.query(
+        'SELECT COUNT(*)::int AS count FROM "SMS_Logs" WHERE success = FALSE'
+      );
+      const count = result.rows[0]?.count || 0;
+      return res.json({ success: true, data: { count } });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 // POST /pmo/admin/sms-logs/:id/resend - manually re-send a specific reminder SMS
 router.post(
   '/admin/sms-logs/:id/resend',
@@ -230,35 +248,29 @@ router.post(
 
       const smsResult = await sendSMS(recipient, message);
 
-      const insertResult = await db.query(
-        `INSERT INTO "SMS_Logs" (
-           appointment_id,
-           couple_id,
-           event_type,
-           recipient,
-           message,
-           success,
-           provider_response,
-           error_message
-         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+      // Update the existing log entry instead of inserting a new row,
+      // so the table reflects the latest status without growing unbounded.
+      const updateResult = await db.query(
+        `UPDATE "SMS_Logs"
+           SET success = $1,
+               provider_response = $2,
+               error_message = $3,
+               created_at = NOW()
+         WHERE id = $4
          RETURNING *`,
         [
-          logRow.appointment_id || null,
-          logRow.couple_id || null,
-          eventType,
-          recipient,
-          message,
           Boolean(smsResult.success),
           smsResult.success ? (smsResult.data || null) : (smsResult.error?.data || null),
-          smsResult.success ? null : (smsResult.error?.message || null)
+          smsResult.success ? null : (smsResult.error?.message || null),
+          id
         ]
       );
 
-      const newRow = insertResult.rows[0];
+      const updatedRow = updateResult.rows[0] || logRow;
 
       return res.json({
         success: true,
-        data: newRow
+        data: updatedRow
       });
     } catch (err) {
       next(err);
