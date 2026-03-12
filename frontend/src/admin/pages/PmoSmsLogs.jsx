@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Stack, Title, Table, Group, Badge, Pagination, Loader, Center, Text, Button, Modal, Divider, Select } from '@mantine/core';
 import dayjs from 'dayjs';
-import { getPmoSmsLogs } from '../../api/pmoAdmin.js';
+import { getPmoSmsLogs, resendPmoSmsLog } from '../../api/pmoAdmin.js';
 
 // All known SMS event types across modules (Family Planning, PMO, Usapan-Series)
 const ALL_EVENT_TYPES = [
@@ -88,6 +88,8 @@ export function PmoSmsLogs() {
   const [viewOpen, setViewOpen] = useState(false);
   const [viewRow, setViewRow] = useState(null);
   const [eventFilter, setEventFilter] = useState('');
+  const [autoRefreshSecondsLeft, setAutoRefreshSecondsLeft] = useState(15 * 60);
+  const [resendLoading, setResendLoading] = useState(false);
 
   const fetchLogs = async (pageNum, currentFilter) => {
     setLoading(true);
@@ -106,6 +108,22 @@ export function PmoSmsLogs() {
     fetchLogs(page, eventFilter).catch(() => {});
   }, [page, eventFilter]);
 
+  // Auto-refresh timer: every 15 minutes refresh the current page
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setAutoRefreshSecondsLeft((prev) => {
+        if (prev <= 1) {
+          // Trigger a refresh when countdown hits zero
+          fetchLogs(page, eventFilter).catch(() => {});
+          return 15 * 60;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [page, eventFilter]);
+
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
   const eventOptions = useMemo(
@@ -117,11 +135,35 @@ export function PmoSmsLogs() {
     []
   );
 
+  const autoRefreshLabel = useMemo(() => {
+    const minutes = Math.floor(autoRefreshSecondsLeft / 60)
+      .toString()
+      .padStart(2, '0');
+    const seconds = (autoRefreshSecondsLeft % 60)
+      .toString()
+      .padStart(2, '0');
+    return `${minutes}:${seconds}`;
+  }, [autoRefreshSecondsLeft]);
+
+  const handleResend = async () => {
+    if (!viewRow || !viewRow.id) return;
+    setResendLoading(true);
+    try {
+      await resendPmoSmsLog(viewRow.id);
+      // After re-send, refresh the list so the latest status appears
+      await fetchLogs(page, eventFilter);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
   return (
     <Stack>
       <Group justify="space-between" align="center">
         <Title order={2}>SMS Logs</Title>
-        <Group gap="xs">
+        <Group gap="xs" align="center">
           <Select
             placeholder="Filter by event"
             data={eventOptions}
@@ -134,6 +176,9 @@ export function PmoSmsLogs() {
             size="xs"
             w={260}
           />
+          <Text size="xs" c="dimmed">
+            Auto refresh in {autoRefreshLabel}
+          </Text>
         </Group>
       </Group>
 
@@ -210,9 +255,15 @@ export function PmoSmsLogs() {
           {viewRow?.errorMessage ? (
             <Text size="sm" c="red"><b>Error:</b> {viewRow.errorMessage}</Text>
           ) : null}
-          <Divider my={4} />
-          <Text fw={600}>Message</Text>
+          <Text size="sm"><b>Message:</b></Text>
           <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>{viewRow?.message || '—'}</Text>
+          {!viewRow?.success && (
+            <Group justify="flex-end" mt="sm">
+              <Button size="xs" loading={resendLoading} onClick={handleResend}>
+                Re-send SMS
+              </Button>
+            </Group>
+          )}
         </Stack>
       </Modal>
 
