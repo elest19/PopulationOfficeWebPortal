@@ -333,4 +333,6 @@ function PmoSmsLogs() {
   );
 }
 
+// Support both default and named imports (for older bundles or builds)
+export { PmoSmsLogs };
 export default PmoSmsLogs;
