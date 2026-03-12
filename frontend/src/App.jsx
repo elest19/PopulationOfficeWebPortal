@@ -42,7 +42,7 @@ import { PmoAppointments } from './admin/pages/PmoAppointments.jsx';
 import { PmoQuestionnaire } from './admin/pages/PmoQuestionnaire.jsx';
 import { PmoAnswers } from './admin/pages/PmoAnswers.jsx';
 import { PmoCounselors } from './admin/pages/PmoCounselors.jsx';
-import { PmoSmsLogs } from './admin/pages/PmoSmsLogs.jsx';
+import PmoSmsLogs from './admin/pages/PmoSmsLogs.jsx';
 import { PmoDbTools } from './admin/pages/PmoDbTools.jsx';
 import { PmoMeifPrint } from './admin/pages/PmoMeifPrint.jsx';
 import { UsapanSchedules } from './admin/pages/UsapanSchedules.jsx';
