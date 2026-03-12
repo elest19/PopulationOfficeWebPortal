@@ -64,6 +64,17 @@ const bookingSchema = {
   })
 };
 
+// Reminder-type SMS events that are safe to re-send
+const REMINDER_EVENT_TYPES = [
+  'FP_REMINDER_2_DAYS',
+  'FP_REMINDER_SAME_DAY',
+  'PMO_REMINDER_2_DAYS',
+  'PMO_REMINDER_SAME_DAY',
+  'USAPAN_REMINDER_2_DAYS',
+  'USAPAN_REMINDER_SAME_DAY',
+  'FILETASK_OVERDUE_REMINDER'
+];
+
 const adminScheduleUpdateSchema = {
   body: Joi.object({
     description: Joi.string().allow('', null),
@@ -177,6 +188,78 @@ router.get(
       const { rows } = await db.query(sql, values);
 
       res.json({ success: true, data: rows, meta: { page, limit, total } });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// POST /pmo/admin/sms-logs/:id/resend - manually re-send a specific reminder SMS
+router.post(
+  '/admin/sms-logs/:id/resend',
+  authenticate,
+  authorize(['Admin']),
+  async (req, res, next) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isInteger(id) || id <= 0) {
+        return res.status(400).json({ success: false, message: 'Invalid SMS log id.' });
+      }
+
+      const existingResult = await db.query(
+        'SELECT * FROM "SMS_Logs" WHERE id = $1 LIMIT 1',
+        [id]
+      );
+      const logRow = existingResult.rows[0];
+      if (!logRow) {
+        return res.status(404).json({ success: false, message: 'SMS log not found.' });
+      }
+
+      const eventType = String(logRow.event_type || '').trim();
+      const recipient = String(logRow.recipient || '').trim();
+      const message = String(logRow.message || '').trim();
+
+      if (!recipient || !message) {
+        return res.status(400).json({ success: false, message: 'SMS log has no recipient or message to resend.' });
+      }
+
+      // Only allow manual resend for known reminder-related events
+      if (!REMINDER_EVENT_TYPES.includes(eventType)) {
+        return res.status(400).json({ success: false, message: 'This SMS event type cannot be resent from the dashboard.' });
+      }
+
+      const smsResult = await sendSMS(recipient, message);
+
+      const insertResult = await db.query(
+        `INSERT INTO "SMS_Logs" (
+           appointment_id,
+           couple_id,
+           event_type,
+           recipient,
+           message,
+           success,
+           provider_response,
+           error_message
+         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+         RETURNING *`,
+        [
+          logRow.appointment_id || null,
+          logRow.couple_id || null,
+          eventType,
+          recipient,
+          message,
+          Boolean(smsResult.success),
+          smsResult.success ? (smsResult.data || null) : (smsResult.error?.data || null),
+          smsResult.success ? null : (smsResult.error?.message || null)
+        ]
+      );
+
+      const newRow = insertResult.rows[0];
+
+      return res.json({
+        success: true,
+        data: newRow
+      });
     } catch (err) {
       next(err);
     }
