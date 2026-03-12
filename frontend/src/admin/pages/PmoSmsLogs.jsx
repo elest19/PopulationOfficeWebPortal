@@ -175,11 +175,11 @@ export function PmoSmsLogs() {
       await resendPmoSmsLog(viewRow.id);
       // After re-send, refresh the list so the latest status appears
       await fetchLogs(page, eventFilter);
-      setViewOpen(false);
-      setViewRow(null);
     } catch (err) {
       console.error(err);
     } finally {
+      setViewOpen(false);
+      setViewRow(null);
       setResendLoading(false);
     }
   };
