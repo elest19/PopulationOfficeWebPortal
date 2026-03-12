@@ -135,7 +135,8 @@ const listSmsLogsSchema = {
   query: Joi.object({
     page: Joi.number().integer().min(1).default(1),
     limit: Joi.number().integer().min(1).max(100).default(25),
-    eventType: Joi.string().allow('', null)
+    eventType: Joi.string().allow('', null),
+    status: Joi.string().valid('SENT', 'FAILED').allow('', null)
   })
 };
 
@@ -147,7 +148,7 @@ router.get(
   validate(listSmsLogsSchema),
   async (req, res, next) => {
     try {
-      const { page, limit, eventType } = req.query;
+      const { page, limit, eventType, status } = req.query;
       const offset = (page - 1) * limit;
 
       const values = [];
@@ -155,6 +156,11 @@ router.get(
       if (eventType) {
         values.push(eventType);
         where.push('l.event_type = $' + values.length);
+      }
+      if (status) {
+        const successFlag = status === 'SENT';
+        values.push(successFlag);
+        where.push('l.success = $' + values.length);
       }
       const whereClause = where.length ? 'WHERE ' + where.join(' AND ') : '';
 
