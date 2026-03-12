@@ -7,7 +7,7 @@ import { useMediaQuery } from '@mantine/hooks';
 import { useAuth } from '../context/AuthContext.jsx';
 import { ProfileModal } from '../components/profile/ProfileModal.jsx';
 import { getFamilyPlanningBookings } from '../api/familyPlanning.js';
-import { getPmoAdminAppointments } from '../api/pmoAdmin.js';
+import { getPmoAdminAppointments, getPmoSmsFailedCount } from '../api/pmoAdmin.js';
 import { getCalendarEvents } from '../api/calendar.js';
 import { socket } from '../socket.js';
 import './adminScrollbar.css';
@@ -19,6 +19,7 @@ function AdminDashboardLayout() {
   const [fpPending, setFpPending] = useState(0);
   const [apptPending, setApptPending] = useState(0);
   const [reqPending, setReqPending] = useState(0);
+  const [smsFailed, setSmsFailed] = useState(0);
   const pendingRefreshTimeoutRef = useRef(null);
 
   const isMobile = useMediaQuery('(max-width: 768px)');
@@ -110,11 +111,22 @@ function AdminDashboardLayout() {
     }
   };
 
+  const loadSmsFailed = async () => {
+    try {
+      const res = await getPmoSmsFailedCount();
+      const count = res.data?.data?.count ?? 0;
+      setSmsFailed(count);
+    } catch {
+      // ignore
+    }
+  };
+
   // Initial pending counts on dashboard load
   useEffect(() => {
     loadFpPending().catch(() => {});
     loadApptPending().catch(() => {});
     loadReqPending().catch(() => {});
+    loadSmsFailed().catch(() => {});
   }, []);
 
   // Live-refresh pending counters via WebSocket
@@ -123,10 +135,11 @@ function AdminDashboardLayout() {
       if (pendingRefreshTimeoutRef.current) return;
       pendingRefreshTimeoutRef.current = setTimeout(() => {
         pendingRefreshTimeoutRef.current = null;
-        // Re-load all three pending counters together
+        // Re-load all counters together
         loadFpPending().catch(() => {});
         loadApptPending().catch(() => {});
         loadReqPending().catch(() => {});
+        loadSmsFailed().catch(() => {});
       }, 500);
     };
 
@@ -145,6 +158,18 @@ function AdminDashboardLayout() {
         pendingRefreshTimeoutRef.current = null;
       }
     };
+  }, []);
+
+  // Fallback auto-refresh every 30 seconds in case WebSocket events are missed
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadFpPending().catch(() => {});
+      loadApptPending().catch(() => {});
+      loadReqPending().catch(() => {});
+      loadSmsFailed().catch(() => {});
+    }, 30000);
+
+    return () => clearInterval(interval);
   }, []);
   const renderSidebar = () => (
     <aside
@@ -217,6 +242,7 @@ function AdminDashboardLayout() {
                       if (item.to === '/admin/general/family-planning') pendingCount = fpPending;
                       if (item.to === '/admin/pmo/appointments') pendingCount = apptPending;
                       if (item.to === '/admin/usapan/requests') pendingCount = reqPending;
+                      if (item.to === '/admin/pmo/sms-logs') pendingCount = smsFailed;
 
                       return (
                         <NavLink
@@ -240,7 +266,7 @@ function AdminDashboardLayout() {
                           </span>
                           <span className="d-flex w-100 justify-content-between align-items-center">
                             <span>{item.label}</span>
-                            {(item.to === '/admin/general/family-planning' || item.to === '/admin/pmo/appointments' || item.to === '/admin/usapan/requests') && (
+                            {(item.to === '/admin/general/family-planning' || item.to === '/admin/pmo/appointments' || item.to === '/admin/usapan/requests' || item.to === '/admin/pmo/sms-logs') && (
                               <span
                                 style={{
                                   backgroundColor: pendingCount > 0 ? '#2563eb' : '#e5e7eb',
