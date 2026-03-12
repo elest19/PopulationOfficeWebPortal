@@ -5,24 +5,39 @@ import { getPmoSmsLogs } from '../../api/pmoAdmin.js';
 
 // All known SMS event types across modules (Family Planning, PMO, Usapan-Series)
 const ALL_EVENT_TYPES = [
-  // PMO
+  // PMO booking lifecycle
   'PMO_CONFIRMATION',
   'PMO_APPROVED',
   'PMO_REJECTED',
   'PMO_CANCELLED',
 
-  // Family Planning
+  // PMO reminders
+  'PMO_REMINDER_2_DAYS',
+  'PMO_REMINDER_SAME_DAY',
+
+  // Family Planning booking lifecycle
   'FP_Booking_Confirmation',
   'FP_APPROVED',
   'FP_REJECTED',
   'FP_CANCELLED',
 
-  // Usapan-Series
+  // Family Planning reminders
+  'FP_REMINDER_2_DAYS',
+  'FP_REMINDER_SAME_DAY',
+
+  // Usapan-Series booking lifecycle
   'USAPAN-SERIES_CONFIRMATION',
   'USAPAN-SERIES_PENDING',
   'USAPAN-SERIES_APPROVED',
   'USAPAN-SERIES_REJECTED',
-  'USAPAN-SERIES_CANCELLED'
+  'USAPAN-SERIES_CANCELLED',
+
+  // Usapan-Series reminders
+  'USAPAN_REMINDER_2_DAYS',
+  'USAPAN_REMINDER_SAME_DAY',
+
+  // File task reminders
+  'FILETASK_OVERDUE_REMINDER'
 ];
 
 function getRecipientDisplay(row) {
