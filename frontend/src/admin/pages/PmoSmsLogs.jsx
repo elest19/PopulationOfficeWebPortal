@@ -40,6 +40,9 @@ const ALL_EVENT_TYPES = [
   'FILETASK_OVERDUE_REMINDER'
 ];
 
+const REFRESH_INTERVAL_SECONDS = 15 * 60;
+const REFRESH_STORAGE_KEY = 'pmoSmsLogsLastRefreshAt';
+
 function getRecipientDisplay(row) {
   if (!row) return '—';
 
@@ -88,7 +91,20 @@ export function PmoSmsLogs() {
   const [viewOpen, setViewOpen] = useState(false);
   const [viewRow, setViewRow] = useState(null);
   const [eventFilter, setEventFilter] = useState('');
-  const [autoRefreshSecondsLeft, setAutoRefreshSecondsLeft] = useState(15 * 60);
+  const [autoRefreshSecondsLeft, setAutoRefreshSecondsLeft] = useState(() => {
+    // Initialize countdown based on last refresh time stored in localStorage
+    if (typeof window === 'undefined') return REFRESH_INTERVAL_SECONDS;
+    try {
+      const stored = Number(window.localStorage.getItem(REFRESH_STORAGE_KEY) || '0');
+      if (!stored) return REFRESH_INTERVAL_SECONDS;
+      const now = Date.now();
+      const elapsed = Math.floor((now - stored) / 1000);
+      if (elapsed >= REFRESH_INTERVAL_SECONDS || elapsed < 0) return 0;
+      return REFRESH_INTERVAL_SECONDS - elapsed;
+    } catch {
+      return REFRESH_INTERVAL_SECONDS;
+    }
+  });
   const [resendLoading, setResendLoading] = useState(false);
 
   const fetchLogs = async (pageNum, currentFilter) => {
@@ -115,7 +131,14 @@ export function PmoSmsLogs() {
         if (prev <= 1) {
           // Trigger a refresh when countdown hits zero
           fetchLogs(page, eventFilter).catch(() => {});
-          return 15 * 60;
+          try {
+            if (typeof window !== 'undefined') {
+              window.localStorage.setItem(REFRESH_STORAGE_KEY, String(Date.now()));
+            }
+          } catch {
+            // ignore storage failures
+          }
+          return REFRESH_INTERVAL_SECONDS;
         }
         return prev - 1;
       });
@@ -152,6 +175,8 @@ export function PmoSmsLogs() {
       await resendPmoSmsLog(viewRow.id);
       // After re-send, refresh the list so the latest status appears
       await fetchLogs(page, eventFilter);
+      setViewOpen(false);
+      setViewRow(null);
     } catch (err) {
       console.error(err);
     } finally {
@@ -176,9 +201,6 @@ export function PmoSmsLogs() {
             size="xs"
             w={260}
           />
-          <Text size="xs" c="dimmed">
-            Auto refresh in {autoRefreshLabel}
-          </Text>
         </Group>
       </Group>
 
