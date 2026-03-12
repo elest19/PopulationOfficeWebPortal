@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Stack, Title, Table, Group, Badge, Pagination, Loader, Center, Text, Button, Modal, Divider, Select } from '@mantine/core';
+import { Stack, Title, Table, Group, Badge, Pagination, Loader, Center, Text, Button, Modal, Divider, Select, Tabs, Checkbox } from '@mantine/core';
 import { useOutletContext } from 'react-router-dom';
 import dayjs from 'dayjs';
-import { getPmoSmsLogs, resendPmoSmsLog, getPmoSmsFailedCount } from '../../api/pmoAdmin.js';
+import { getPmoSmsLogs, resendPmoSmsLog, getPmoSmsFailedCount, exportAdminDatabase } from '../../api/pmoAdmin.js';
 
 // All known SMS event types across modules (Family Planning, PMO, Usapan-Series)
 const ALL_EVENT_TYPES = [
@@ -110,6 +110,12 @@ export function PmoSmsLogs() {
     }
   });
   const [resendLoading, setResendLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('logs');
+
+  // Export state
+  const [exportFormat, setExportFormat] = useState(''); // 'json' | 'sql'
+  const [exportIncludeData, setExportIncludeData] = useState(true);
+  const [exportLoading, setExportLoading] = useState(false);
 
   const fetchLogs = async (pageNum, currentEventFilter, currentStatusFilter) => {
     setLoading(true);
@@ -118,6 +124,7 @@ export function PmoSmsLogs() {
         page: pageNum,
         limit
       };
+
       if (currentEventFilter) params.eventType = currentEventFilter;
       if (currentStatusFilter) params.status = currentStatusFilter;
 
@@ -131,9 +138,39 @@ export function PmoSmsLogs() {
     }
   };
 
+  const handleExport = async () => {
+    if (!exportFormat) return;
+    setExportLoading(true);
+    try {
+      const res = await exportAdminDatabase({
+        format: exportFormat,
+        includeData: exportIncludeData
+      });
+
+      const blob = res.data;
+      const extension = exportFormat === 'sql' ? 'sql' : 'json';
+      const filename = `population-office-backup-${dayjs().format('YYYYMMDD-HHmmss')}.${extension}`;
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
   useEffect(() => {
-    fetchLogs(page, eventFilter, statusFilter).catch(() => {});
-  }, [page, eventFilter, statusFilter]);
+    if (activeTab === 'logs') {
+      fetchLogs(page, eventFilter, statusFilter).catch(() => {});
+    }
+  }, [page, eventFilter, statusFilter, activeTab]);
 
   // Auto-refresh timer: every 15 minutes refresh the current page
   useEffect(() => {
@@ -141,7 +178,9 @@ export function PmoSmsLogs() {
       setAutoRefreshSecondsLeft((prev) => {
         if (prev <= 1) {
           // Trigger a refresh when countdown hits zero
-          fetchLogs(page, eventFilter, statusFilter).catch(() => {});
+          if (activeTab === 'logs') {
+            fetchLogs(page, eventFilter, statusFilter).catch(() => {});
+          }
           try {
             if (typeof window !== 'undefined') {
               window.localStorage.setItem(REFRESH_STORAGE_KEY, String(Date.now()));
@@ -156,7 +195,7 @@ export function PmoSmsLogs() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [page, eventFilter]);
+  }, [page, eventFilter, activeTab]);
 
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
@@ -218,84 +257,138 @@ export function PmoSmsLogs() {
 
   return (
     <Stack>
-      <Group justify="space-between" align="center">
-        <Title order={2}>SMS Logs</Title>
-        <Group gap="xs" align="center">
-          <Select
-            placeholder="Filter by event"
-            data={eventOptions}
-            value={eventFilter || null}
-            onChange={(v) => {
-              setPage(1);
-              setEventFilter(v || '');
-            }}
-            clearable
-            size="xs"
-            w={260}
-          />
-          <Select
-            placeholder="Filter by status"
-            data={statusOptions}
-            value={statusFilter || null}
-            onChange={(v) => {
-              setPage(1);
-              setStatusFilter(v || '');
-            }}
-            clearable
-            size="xs"
-            w={160}
-          />
-        </Group>
-      </Group>
+      <Tabs value={activeTab} onChange={setActiveTab} variant="outline">
+        <Tabs.List>
+          <Tabs.Tab value="logs">SMS Logs</Tabs.Tab>
+          <Tabs.Tab value="importExport">Import / Export</Tabs.Tab>
+        </Tabs.List>
 
-      {loading ? (
-        <Center py="lg"><Loader/></Center>
-      ) : items.length === 0 ? (
-        <Text size="sm" c="dimmed">No SMS logs found.</Text>
-      ) : (
-        <Table
-          striped
-          withTableBorder
-          withColumnBorders
-          highlightOnHover
-          verticalSpacing="xs"
-          fontSize="sm"
-        >
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th style={{ textAlign: 'left' }}>No.</Table.Th>
-              <Table.Th style={{ textAlign: 'center', minWidth: 150 }}>Time</Table.Th>
-              <Table.Th>Recipient</Table.Th>
-              <Table.Th>Status</Table.Th>
-              <Table.Th style={{ textAlign: 'center', minWidth: 90 }}>Status</Table.Th>
-              <Table.Th>Message</Table.Th>
-              <Table.Th>Actions</Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {items.map((row, index) => {
-              const rowNumber = (page - 1) * limit + index + 1;
-              return (
-                <Table.Tr key={row.id}>
-                  <Table.Td>{rowNumber}</Table.Td>
-                  <Table.Td>{row.createdAt ? dayjs(row.createdAt).format('MMM D, YYYY h:mm A') : '—'}</Table.Td>
-                  <Table.Td>{getRecipientDisplay(row)}</Table.Td>
-                  <Table.Td>{row.eventType}</Table.Td>
-                  <Table.Td style={{ textAlign: 'center' }}>
-                    <Badge color={row.success ? 'green' : 'red'}>{row.success ? 'SENT' : 'FAILED'}</Badge>
-                  </Table.Td>
-                  <Table.Td style={{ maxWidth: 420, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.message}</Table.Td>
-                  <Table.Td>
-                    <Button size="xs" variant="light" onClick={() => { setViewRow(row); setViewOpen(true); }}>
-                      View
-                    </Button>
-                  </Table.Td>
+        <Tabs.Panel value="logs" pt="md">
+          <Group justify="space-between" align="center">
+            <Title order={2}>SMS Logs</Title>
+            <Group gap="xs" align="center">
+              <Select
+                placeholder="Filter by event"
+                data={eventOptions}
+                value={eventFilter || null}
+                onChange={(v) => {
+                  setPage(1);
+                  setEventFilter(v || '');
+                }}
+                clearable
+                size="xs"
+                w={260}
+              />
+              <Select
+                placeholder="Filter by status"
+                data={statusOptions}
+                value={statusFilter || null}
+                onChange={(v) => {
+                  setPage(1);
+                  setStatusFilter(v || '');
+                }}
+                clearable
+                size="xs"
+                w={160}
+              />
+            </Group>
+          </Group>
+
+          {loading ? (
+            <Center py="lg"><Loader/></Center>
+          ) : items.length === 0 ? (
+            <Text size="sm" c="dimmed">No SMS logs found.</Text>
+          ) : (
+            <Table
+              striped
+              withTableBorder
+              withColumnBorders
+              highlightOnHover
+              verticalSpacing="xs"
+              fontSize="sm"
+            >
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th style={{ textAlign: 'left' }}>No.</Table.Th>
+                  <Table.Th style={{ textAlign: 'center', minWidth: 150 }}>Time</Table.Th>
+                  <Table.Th>Recipient</Table.Th>
+                  <Table.Th>Status</Table.Th>
+                  <Table.Th style={{ textAlign: 'center', minWidth: 90 }}>Status</Table.Th>
+                  <Table.Th>Message</Table.Th>
+                  <Table.Th>Actions</Table.Th>
                 </Table.Tr>
-              );
-            })}
-          </Table.Tbody>
-        </Table>
-      )}
+              </Table.Thead>
+              <Table.Tbody>
+                {items.map((row, index) => {
+                  const rowNumber = (page - 1) * limit + index + 1;
+                  return (
+                    <Table.Tr key={row.id}>
+                      <Table.Td>{rowNumber}</Table.Td>
+                      <Table.Td>{row.createdAt ? dayjs(row.createdAt).format('MMM D, YYYY h:mm A') : '—'}</Table.Td>
+                      <Table.Td>{getRecipientDisplay(row)}</Table.Td>
+                      <Table.Td>{row.eventType}</Table.Td>
+                      <Table.Td style={{ textAlign: 'center' }}>
+                        <Badge color={row.success ? 'green' : 'red'}>{row.success ? 'SENT' : 'FAILED'}</Badge>
+                      </Table.Td>
+                      <Table.Td style={{ maxWidth: 420, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.message}</Table.Td>
+                      <Table.Td>
+                        <Button size="xs" variant="light" onClick={() => { setViewRow(row); setViewOpen(true); }}>
+                          View
+                        </Button>
+                      </Table.Td>
+                    </Table.Tr>
+                  );
+                })}
+              </Table.Tbody>
+            </Table>
+          )}
+        </Tabs.Panel>
+
+        <Tabs.Panel value="importExport" pt="md">
+          <Stack gap="md">
+            <Title order={2}>Import / Export Database</Title>
+
+            <Stack gap="xs">
+              <Text fw={500} size="sm">Export options</Text>
+              <Group align="center" gap="md">
+                <Select
+                  label="File type"
+                  placeholder="Choose file type"
+                  data={[
+                    { value: 'json', label: 'JSON (.json)' },
+                    { value: 'sql', label: 'SQL (.sql)' }
+                  ]}
+                  value={exportFormat || null}
+                  onChange={(v) => setExportFormat(v || '')}
+                  w={220}
+                  size="sm"
+                />
+                <Checkbox
+                  label="Include data (not just structure)"
+                  checked={exportIncludeData}
+                  onChange={(event) => setExportIncludeData(event.currentTarget.checked)}
+                  size="sm"
+                />
+                <Button
+                  size="sm"
+                  disabled={!exportFormat || exportLoading}
+                  loading={exportLoading}
+                  onClick={handleExport}
+                >
+                  Download
+                </Button>
+              </Group>
+            </Stack>
+
+            <Divider />
+
+            <Text size="sm" c="dimmed">
+              Import with preview will be added here. You will be able to upload a backup file
+              and see a summary of tables and row counts before any changes are applied.
+            </Text>
+          </Stack>
+        </Tabs.Panel>
+      </Tabs>
 
       <Modal
         opened={viewOpen}

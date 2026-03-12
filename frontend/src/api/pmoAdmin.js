@@ -93,3 +93,11 @@ export function getPmoSmsFailedCount() {
 export function getPmoAdminMeif(appointmentId) {
   return apiClient.get(`/pmo/admin/appointments/${appointmentId}/meif`);
 }
+
+export function exportAdminDatabase(params) {
+  // Returns a Blob (JSON or SQL) for download
+  return apiClient.get('/pmo/admin/db/export', {
+    params,
+    responseType: 'blob'
+  });
+}

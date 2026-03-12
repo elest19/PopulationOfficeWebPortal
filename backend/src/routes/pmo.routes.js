@@ -200,6 +200,121 @@ router.get(
   }
 );
 
+// Admin DB export (JSON or SQL)
+router.get(
+  '/admin/db/export',
+  authenticate,
+  authorize(['Admin']),
+  async (req, res, next) => {
+    try {
+      const rawFormat = String(req.query.format || 'json').toLowerCase();
+      const format = rawFormat === 'sql' ? 'sql' : 'json';
+      const includeData = String(req.query.includeData || 'true').toLowerCase() !== 'false';
+
+      // Curated list of tables that are safe and relevant to export from this app.
+      const TABLES = [
+        'Users',
+        'SMS_Logs',
+        'PMO_Appointments',
+        'PMO_Couples',
+        'PMO_Contacts',
+        'PMO_Persons',
+        'PMO_Questionnaire',
+        'PMO_Answers',
+        'PmoSchedules',
+        'Counselors',
+        'file_tasks'
+      ];
+
+      const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+
+      if (format === 'json') {
+        const tablesPayload = {};
+
+        for (const tableName of TABLES) {
+          if (!includeData) {
+            tablesPayload[tableName] = { rows: [] };
+            continue;
+          }
+
+          try {
+            const { rows } = await db.query(`SELECT * FROM "${tableName}"`);
+            tablesPayload[tableName] = { rows };
+          } catch (e) {
+            // If a table is missing in this environment, skip it gracefully.
+            console.error('DB export JSON: failed to read table', tableName, e?.message || e);
+            tablesPayload[tableName] = { rows: [], error: e?.message || String(e) };
+          }
+        }
+
+        const payload = {
+          meta: {
+            format: 'json',
+            includeData,
+            exportedAt: new Date().toISOString(),
+            tables: TABLES
+          },
+          tables: tablesPayload
+        };
+
+        const filename = `population-office-backup-${timestamp}.json`;
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        return res.send(JSON.stringify(payload, null, 2));
+      }
+
+      // SQL export
+      const chunks = [];
+      chunks.push('-- Population Office backup');
+      chunks.push(`-- Exported at ${new Date().toISOString()}`);
+      chunks.push('BEGIN;');
+
+      const sqlEscapeLiteral = (value) => {
+        if (value === null || value === undefined) return 'NULL';
+        if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+        if (typeof value === 'boolean') return value ? 'TRUE' : 'FALSE';
+        const str = String(value);
+        // Escape single quotes by doubling them
+        return "'" + str.replace(/'/g, "''") + "'";
+      };
+
+      for (const tableName of TABLES) {
+        if (!includeData) {
+          continue;
+        }
+
+        let rows;
+        try {
+          const result = await db.query(`SELECT * FROM "${tableName}"`);
+          rows = result.rows;
+        } catch (e) {
+          console.error('DB export SQL: failed to read table', tableName, e?.message || e);
+          continue;
+        }
+
+        if (!rows || !rows.length) continue;
+
+        for (const row of rows) {
+          const columns = Object.keys(row);
+          if (!columns.length) continue;
+          const colList = columns.map((c) => `"${c}"`).join(', ');
+          const valuesList = columns.map((c) => sqlEscapeLiteral(row[c])).join(', ');
+          chunks.push(`INSERT INTO "${tableName}" (${colList}) VALUES (${valuesList});`);
+        }
+      }
+
+      chunks.push('COMMIT;');
+      const sqlText = chunks.join('\n');
+      const filename = `population-office-backup-${timestamp}.sql`;
+      res.setHeader('Content-Type', 'application/sql');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      return res.send(sqlText);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 // GET /pmo/admin/sms-logs/failed-count - total number of failed SMS attempts
 router.get(
   '/admin/sms-logs/failed-count',
