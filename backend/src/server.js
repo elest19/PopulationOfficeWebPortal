@@ -6,6 +6,7 @@ const { startFamilyPlanningReminderJob } = require('./jobs/familyPlanningReminde
 const { startUsapanReminderJob } = require('./jobs/usapanReminders');
 const { startPmoReminderJob } = require('./jobs/pmoReminders');
 const { startFileTaskOverdueReminderJob } = require('./jobs/fileTaskOverdueReminders');
+const { startSmsRetryJob } = require('./jobs/smsRetryJob');
 
 const port = config.port;
 
@@ -34,6 +35,7 @@ startFamilyPlanningReminderJob();
 startUsapanReminderJob();
 startPmoReminderJob();
 startFileTaskOverdueReminderJob();
+startSmsRetryJob();
 
 server.listen(port, () => {
   console.log(`Server listening on port ${port}`);

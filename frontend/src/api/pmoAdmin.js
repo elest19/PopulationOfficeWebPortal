@@ -86,6 +86,10 @@ export function resendPmoSmsLog(id) {
   return apiClient.post(`/pmo/admin/sms-logs/${id}/resend`);
 }
 
+export function getPmoSmsFailedCount() {
+  return apiClient.get('/pmo/admin/sms-logs/failed-count');
+}
+
 export function getPmoAdminMeif(appointmentId) {
   return apiClient.get(`/pmo/admin/appointments/${appointmentId}/meif`);
 }
