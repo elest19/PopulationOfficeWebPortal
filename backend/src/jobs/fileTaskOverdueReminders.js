@@ -4,7 +4,7 @@ const dayjs = require('dayjs');
 const db = require('../config/db');
 const { sendSMS } = require('../services/textbeeSms');
 
-async function logFileTaskOverdueSmsAttempt({ fileTaskId, recipient, message, success, providerResponse, errorMessage }) {
+async function logFileTaskOverdueSmsAttempt({ recipient, message, success, providerResponse, errorMessage }) {
   try {
     await db.query(
       `INSERT INTO "SMS_Logs" (
@@ -18,7 +18,7 @@ async function logFileTaskOverdueSmsAttempt({ fileTaskId, recipient, message, su
          error_message
        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
       [
-        fileTaskId, // reuse appointment_id column to track which file task this log refers to
+        null, // leave appointment_id null for file tasks to avoid UUID type conflicts
         null,
         'FILETASK_OVERDUE_REMINDER',
         String(recipient || ''),
@@ -42,11 +42,11 @@ async function sendOverdueTaskReminder(row) {
   const message = `The task "${taskTitle}" is overdue, please submit the necessary document.`;
 
   // Only stop sending once we have at least one successful SMS for this
-  // specific file task + recipient combination. If previous attempts all
+  // specific recipient + message combination. If previous attempts all
   // failed, we keep resending every interval until one succeeds.
   const existing = await db.query(
-    'SELECT BOOL_OR(success) AS has_success FROM "SMS_Logs" WHERE event_type = $1 AND recipient = $2 AND appointment_id = $3',
-    ['FILETASK_OVERDUE_REMINDER', contact, row.filetaskid]
+    'SELECT BOOL_OR(success) AS has_success FROM "SMS_Logs" WHERE event_type = $1 AND recipient = $2 AND message = $3',
+    ['FILETASK_OVERDUE_REMINDER', contact, message]
   );
   const hasSuccess = existing.rows[0]?.has_success === true;
   if (hasSuccess) {
@@ -56,7 +56,6 @@ async function sendOverdueTaskReminder(row) {
   const smsResult = await sendSMS(contact, message);
 
   await logFileTaskOverdueSmsAttempt({
-    fileTaskId: row.filetaskid,
     recipient: contact,
     message,
     success: smsResult.success,
