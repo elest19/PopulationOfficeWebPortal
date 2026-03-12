@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Stack, Title, Table, Group, Badge, Pagination, Loader, Center, Text, Button, Modal, Divider, Select } from '@mantine/core';
+import { useOutletContext } from 'react-router-dom';
 import dayjs from 'dayjs';
-import { getPmoSmsLogs, resendPmoSmsLog } from '../../api/pmoAdmin.js';
+import { getPmoSmsLogs, resendPmoSmsLog, getPmoSmsFailedCount } from '../../api/pmoAdmin.js';
 
 // All known SMS event types across modules (Family Planning, PMO, Usapan-Series)
 const ALL_EVENT_TYPES = [
@@ -83,6 +84,8 @@ function getRecipientDisplay(row) {
 }
 
 export function PmoSmsLogs() {
+  const outletContext = useOutletContext?.() || {};
+  const { setSmsFailed } = outletContext;
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -91,6 +94,7 @@ export function PmoSmsLogs() {
   const [viewOpen, setViewOpen] = useState(false);
   const [viewRow, setViewRow] = useState(null);
   const [eventFilter, setEventFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [autoRefreshSecondsLeft, setAutoRefreshSecondsLeft] = useState(() => {
     // Initialize countdown based on last refresh time stored in localStorage
     if (typeof window === 'undefined') return REFRESH_INTERVAL_SECONDS;
@@ -107,10 +111,17 @@ export function PmoSmsLogs() {
   });
   const [resendLoading, setResendLoading] = useState(false);
 
-  const fetchLogs = async (pageNum, currentFilter) => {
+  const fetchLogs = async (pageNum, currentEventFilter, currentStatusFilter) => {
     setLoading(true);
     try {
-      const res = await getPmoSmsLogs({ page: pageNum, limit, eventType: currentFilter || undefined });
+      const params = {
+        page: pageNum,
+        limit
+      };
+      if (currentEventFilter) params.eventType = currentEventFilter;
+      if (currentStatusFilter) params.status = currentStatusFilter;
+
+      const res = await getPmoSmsLogs(params);
       setItems(res.data.data || []);
       setTotal(res.data.meta?.total || 0);
     } catch (err) {
@@ -121,8 +132,8 @@ export function PmoSmsLogs() {
   };
 
   useEffect(() => {
-    fetchLogs(page, eventFilter).catch(() => {});
-  }, [page, eventFilter]);
+    fetchLogs(page, eventFilter, statusFilter).catch(() => {});
+  }, [page, eventFilter, statusFilter]);
 
   // Auto-refresh timer: every 15 minutes refresh the current page
   useEffect(() => {
@@ -130,7 +141,7 @@ export function PmoSmsLogs() {
       setAutoRefreshSecondsLeft((prev) => {
         if (prev <= 1) {
           // Trigger a refresh when countdown hits zero
-          fetchLogs(page, eventFilter).catch(() => {});
+          fetchLogs(page, eventFilter, statusFilter).catch(() => {});
           try {
             if (typeof window !== 'undefined') {
               window.localStorage.setItem(REFRESH_STORAGE_KEY, String(Date.now()));
@@ -158,6 +169,14 @@ export function PmoSmsLogs() {
     []
   );
 
+  const statusOptions = useMemo(
+    () => [
+      { value: 'SENT', label: 'SENT' },
+      { value: 'FAILED', label: 'FAILED' }
+    ],
+    []
+  );
+
   const autoRefreshLabel = useMemo(() => {
     const minutes = Math.floor(autoRefreshSecondsLeft / 60)
       .toString()
@@ -172,9 +191,22 @@ export function PmoSmsLogs() {
     if (!viewRow || !viewRow.id) return;
     setResendLoading(true);
     try {
-      await resendPmoSmsLog(viewRow.id);
+      const res = await resendPmoSmsLog(viewRow.id);
       // After re-send, refresh the list so the latest status appears
-      await fetchLogs(page, eventFilter);
+      await fetchLogs(page, eventFilter, statusFilter);
+
+      // If the resend succeeded and we have access to setSmsFailed from the
+      // admin layout, refresh the failed-SMS counter immediately so the badge
+      // updates in real time without waiting for the 30s interval.
+      if (res?.data?.success && typeof setSmsFailed === 'function') {
+        try {
+          const failedRes = await getPmoSmsFailedCount();
+          const count = failedRes.data?.data?.count ?? 0;
+          setSmsFailed(count);
+        } catch (e) {
+          // ignore counter refresh errors; UI will still update on next interval
+        }
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -200,6 +232,18 @@ export function PmoSmsLogs() {
             clearable
             size="xs"
             w={260}
+          />
+          <Select
+            placeholder="Filter by status"
+            data={statusOptions}
+            value={statusFilter || null}
+            onChange={(v) => {
+              setPage(1);
+              setStatusFilter(v || '');
+            }}
+            clearable
+            size="xs"
+            w={160}
           />
         </Group>
       </Group>

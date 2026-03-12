@@ -333,7 +333,7 @@ function AdminDashboardLayout() {
               </div>
             )}
 
-            <Outlet context={{ setFpPending, setApptPending, setReqPending }} />
+            <Outlet context={{ setFpPending, setApptPending, setReqPending, setSmsFailed }} />
           </div>
         </div>
       </div>
