@@ -55,7 +55,8 @@ function AdminDashboardLayout() {
               { to: '/admin/pmo/appointments', label: 'Appointments', icon: IconClipboardList },
               { to: '/admin/pmo/questionnaire', label: 'Questionnaire', icon: IconListDetails },
               { to: '/admin/pmo/answers', label: 'Answers', icon: IconListDetails },
-              { to: '/admin/pmo/counselors', label: 'Counselors', icon: IconUserCheck }
+              { to: '/admin/pmo/counselors', label: 'Counselors', icon: IconUserCheck },
+              { to: '/admin/pmo/db-tools', label: 'DB Tools', icon: IconListDetails }
             ]
           }
         ]

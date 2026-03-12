@@ -211,20 +211,15 @@ router.get(
       const format = rawFormat === 'sql' ? 'sql' : 'json';
       const includeData = String(req.query.includeData || 'true').toLowerCase() !== 'false';
 
-      // Curated list of tables that are safe and relevant to export from this app.
-      const TABLES = [
-        'Users',
-        'SMS_Logs',
-        'PMO_Appointments',
-        'PMO_Couples',
-        'PMO_Contacts',
-        'PMO_Persons',
-        'PMO_Questionnaire',
-        'PMO_Answers',
-        'PmoSchedules',
-        'Counselors',
-        'file_tasks'
-      ];
+      // Discover all user tables in the public schema so we export everything.
+      const tablesResult = await db.pool.query(
+        `SELECT table_name
+           FROM information_schema.tables
+          WHERE table_schema = 'public'
+            AND table_type = 'BASE TABLE'
+          ORDER BY table_name ASC`
+      );
+      const TABLES = tablesResult.rows.map((r) => r.table_name).filter(Boolean);
 
       const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
 
