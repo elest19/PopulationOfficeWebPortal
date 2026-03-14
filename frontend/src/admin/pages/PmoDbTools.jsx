@@ -21,12 +21,12 @@ export function PmoDbTools() {
     setExportLoading(true);
     try {
       const res = await exportAdminDatabase({
-        format: 'json',
+        format: 'sql',
         includeData: exportIncludeData
       });
 
       const blob = res.data;
-      const filename = `population-office-backup-${dayjs().format('YYYYMMDD-HHmmss')}.json`;
+      const filename = `population-office-backup-${dayjs().format('YYYYMMDD-HHmmss')}.sql`;
 
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -177,7 +177,7 @@ export function PmoDbTools() {
       <Stack gap="xs">
         <Text fw={500} size="sm">Export options</Text>
         <Group align="center" gap="md">
-          <Text size="sm"><b>File type:</b> JSON (.json)</Text>
+          <Text size="sm"><b>File type:</b> SQL (.sql)</Text>
           <Checkbox
             label="Include data (not just structure)"
             checked={exportIncludeData}
