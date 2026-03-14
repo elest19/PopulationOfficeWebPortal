@@ -41,7 +41,8 @@ function AdminDashboardLayout() {
         { to: '/admin/general/education-booklets', label: 'Education Booklets', icon: IconClipboardList },
         { to: '/admin/general/accounts', label: 'Accounts', icon: IconUsers },
         { to: '/admin/general/file-tasks', label: 'Document Reports', icon: IconClipboardList },
-        { to: '/admin/pmo/sms-logs', label: 'SMS Logs', icon: IconMail }
+        { to: '/admin/pmo/sms-logs', label: 'SMS Logs', icon: IconMail },
+        { to: '/admin/pmo/db-tools', label: 'DB Tools', icon: IconListDetails }
       ]
     },
     ...(isAdmin
@@ -55,8 +56,7 @@ function AdminDashboardLayout() {
               { to: '/admin/pmo/appointments', label: 'Appointments', icon: IconClipboardList },
               { to: '/admin/pmo/questionnaire', label: 'Questionnaire', icon: IconListDetails },
               { to: '/admin/pmo/answers', label: 'Answers', icon: IconListDetails },
-              { to: '/admin/pmo/counselors', label: 'Counselors', icon: IconUserCheck },
-              { to: '/admin/pmo/db-tools', label: 'DB Tools', icon: IconListDetails }
+              { to: '/admin/pmo/counselors', label: 'Counselors', icon: IconUserCheck }
             ]
           }
         ]
