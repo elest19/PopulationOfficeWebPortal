@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Stack, Title, Group, Checkbox, Button, Divider, Text, Table, Alert, Modal, Radio } from '@mantine/core';
 import dayjs from 'dayjs';
-import { exportAdminDatabase, importAdminDatabase } from '../../api/pmoAdmin.js';
+import { exportAdminDatabase, importAdminDatabase, importAdminDatabaseSql } from '../../api/pmoAdmin.js';
 
 export function PmoDbTools() {
   const [exportIncludeData, setExportIncludeData] = useState(true);
@@ -16,6 +16,8 @@ export function PmoDbTools() {
   const [importResultMessage, setImportResultMessage] = useState('');
   const [importMode, setImportMode] = useState('replace'); // 'replace' | 'add'
   const [skippedPreview, setSkippedPreview] = useState(null); // { [table]: rows[] }
+  const [isSqlImport, setIsSqlImport] = useState(false);
+  const [sqlImportText, setSqlImportText] = useState('');
 
   const handleExport = async () => {
     setExportLoading(true);
@@ -50,6 +52,8 @@ export function PmoDbTools() {
     setImportPayload(null);
     setImportResultMessage('');
     setSkippedPreview(null);
+    setIsSqlImport(false);
+    setSqlImportText('');
 
     if (!file) {
       setImportFileName('');
@@ -66,6 +70,8 @@ export function PmoDbTools() {
       const text = await file.text();
 
       if (isJson) {
+        setIsSqlImport(false);
+        setSqlImportText('');
         try {
           const parsed = JSON.parse(text);
 
@@ -121,10 +127,12 @@ export function PmoDbTools() {
           setImportError('Unable to parse JSON backup file.');
         }
       } else if (isSql) {
-        // For SQL files, we only show a lightweight text notice for now.
-        setImportError(
-          'SQL import preview is not yet implemented. Please use a JSON backup to see table summaries.'
-        );
+        // For SQL files we run the script as-is; no preview is available.
+        setIsSqlImport(true);
+        setSqlImportText(text);
+        setImportPreview([]);
+        setImportPayload(null);
+        setImportError('');
       } else {
         setImportError('Unsupported file type. Please select a .json or .sql backup file.');
       }
@@ -137,11 +145,34 @@ export function PmoDbTools() {
   };
 
   const handleOpenImportModal = () => {
+    if (isSqlImport) {
+      if (!sqlImportText || importLoading || importSubmitting) return;
+      setImportModalOpen(true);
+      return;
+    }
     if (!importPayload || !importPreview.length || importLoading || importSubmitting) return;
     setImportModalOpen(true);
   };
 
   const handleConfirmImport = async () => {
+    if (isSqlImport) {
+      if (!sqlImportText) return;
+      setImportSubmitting(true);
+      setImportResultMessage('');
+      try {
+        await importAdminDatabaseSql(sqlImportText);
+        setImportResultMessage('SQL import completed successfully.');
+      } catch (err) {
+        console.error(err);
+        const apiMessage = err?.response?.data?.message || err?.response?.data?.error?.message;
+        setImportResultMessage(apiMessage || 'SQL import failed. Please check the script and try again.');
+      } finally {
+        setImportSubmitting(false);
+        setImportModalOpen(false);
+      }
+      return;
+    }
+
     if (!importPayload) return;
     setImportSubmitting(true);
     setImportResultMessage('');
@@ -264,7 +295,7 @@ export function PmoDbTools() {
           </Alert>
         )}
 
-        {!importError && importPreview.length > 0 && (
+        {!isSqlImport && !importError && importPreview.length > 0 && (
           <Table striped withTableBorder withColumnBorders highlightOnHover fontSize="sm" verticalSpacing="xs">
             <Table.Thead>
               <Table.Tr>
@@ -283,7 +314,7 @@ export function PmoDbTools() {
           </Table>
         )}
 
-        {!importError && !importPreview.length && !importLoading && (
+        {!isSqlImport && !importError && !importPreview.length && !importLoading && (
           <Text size="sm" c="dimmed">
             Choose a JSON backup file exported from this system to see a preview of tables and row counts.
             You can then apply the import to the database after confirming.
@@ -349,8 +380,9 @@ export function PmoDbTools() {
           </div>
           <Text ta="center" fw={700} size="lg">Are you sure?</Text>
           <Text ta="center" size="sm" c="dimmed">
-            This will replace the contents of the affected tables with the data from the selected backup.
-            This action cannot be undone.
+            {isSqlImport
+              ? 'This will execute the uploaded SQL script directly against the current database inside a single transaction. Make sure you are using a test database before proceeding.'
+              : 'This will replace the contents of the affected tables with the data from the selected backup. This action cannot be undone.'}
           </Text>
           <Group justify="center" mt="sm">
             <Button

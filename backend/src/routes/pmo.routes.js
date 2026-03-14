@@ -200,6 +200,39 @@ router.get(
   }
 );
 
+// POST /pmo/admin/db/import-sql - execute raw SQL script against the database
+router.post(
+  '/admin/db/import-sql',
+  authenticate,
+  authorize(['Admin']),
+  async (req, res, next) => {
+    const client = await db.pool.connect();
+    try {
+      const sqlText = req.body && typeof req.body.sql === 'string' ? req.body.sql : null;
+
+      if (!sqlText || !sqlText.trim()) {
+        client.release();
+        return res.status(400).json({ success: false, message: 'SQL text is required for import.' });
+      }
+
+      await client.query('BEGIN');
+      await client.query(sqlText);
+      await client.query('COMMIT');
+
+      return res.json({ success: true, data: { executed: true } });
+    } catch (err) {
+      try {
+        await client.query('ROLLBACK');
+      } catch {
+        // ignore rollback failures
+      }
+      next(err);
+    } finally {
+      client.release();
+    }
+  }
+);
+
 // POST /pmo/admin/db/import - restore database from JSON backup payload
 router.post(
   '/admin/db/import',
