@@ -106,3 +106,8 @@ export function importAdminDatabase(payload) {
   // Apply a JSON backup payload to the database
   return apiClient.post('/pmo/admin/db/import', payload);
 }
+
+export function importAdminDatabaseSql(sqlText) {
+  // Execute a raw SQL backup script against the database
+  return apiClient.post('/pmo/admin/db/import-sql', { sql: sqlText });
+}
