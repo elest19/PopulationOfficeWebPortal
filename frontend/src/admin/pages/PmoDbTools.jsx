@@ -65,13 +65,42 @@ export function PmoDbTools() {
 
           const tables = [];
 
-          // Expected backup format: { tables: { [name]: rows[] } } or { [name]: rows[] }
-          const source = parsed.tables && typeof parsed.tables === 'object' ? parsed.tables : parsed;
+          // Expected backup format (current backend):
+          // {
+          //   meta: { tables: [ 'Table1', 'Table2', ... ], ... },
+          //   tables: { Table1: { rows: [...] }, Table2: { rows: [...] }, ... }
+          // }
+          // Fallbacks are handled as well so this keeps working if shape evolves slightly.
 
-          if (source && typeof source === 'object') {
-            Object.entries(source).forEach(([tableName, rows]) => {
-              if (!Array.isArray(rows)) return;
-              tables.push({ table: tableName, rowCount: rows.length });
+          const tableNamesFromMeta = Array.isArray(parsed?.meta?.tables)
+            ? parsed.meta.tables
+            : null;
+
+          const sourceTables = parsed.tables && typeof parsed.tables === 'object'
+            ? parsed.tables
+            : parsed;
+
+          if (sourceTables && typeof sourceTables === 'object') {
+            const entries = Object.entries(sourceTables);
+
+            entries.forEach(([tableName, value]) => {
+              // Handle { rows: [...] } shape
+              if (value && typeof value === 'object' && Array.isArray(value.rows)) {
+                tables.push({ table: tableName, rowCount: value.rows.length });
+                return;
+              }
+
+              // Handle direct array shape: [ row1, row2, ... ]
+              if (Array.isArray(value)) {
+                tables.push({ table: tableName, rowCount: value.length });
+              }
+            });
+          }
+
+          // If meta.tables exists but we didn't find any rows, still surface those names with 0 rows
+          if ((!tables.length) && tableNamesFromMeta) {
+            tableNamesFromMeta.forEach((name) => {
+              tables.push({ table: String(name), rowCount: 0 });
             });
           }
 
