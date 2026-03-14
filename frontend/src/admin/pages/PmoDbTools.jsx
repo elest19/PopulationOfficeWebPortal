@@ -292,6 +292,21 @@ export function PmoDbTools() {
         withCloseButton={false}
       >
         <Stack gap="sm" align="stretch">
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}>
+            <div
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: '999px',
+                backgroundColor: '#fee2e2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <span style={{ fontSize: 32, lineHeight: 1, color: '#ef4444' }}>!</span>
+            </div>
+          </div>
           <Text ta="center" fw={700} size="lg">Are you sure?</Text>
           <Text ta="center" size="sm" c="dimmed">
             This will replace the contents of the affected tables with the data from the selected backup.
@@ -300,6 +315,7 @@ export function PmoDbTools() {
           <Group justify="center" mt="sm">
             <Button
               color="red"
+              fullWidth
               onClick={handleConfirmImport}
               loading={importSubmitting}
             >
