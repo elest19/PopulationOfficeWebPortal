@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Stack, Title, Group, Select, Checkbox, Button, Divider, Text, Table, Alert } from '@mantine/core';
+import { Stack, Title, Group, Select, Checkbox, Button, Divider, Text, Table, Alert, Modal } from '@mantine/core';
 import dayjs from 'dayjs';
-import { exportAdminDatabase } from '../../api/pmoAdmin.js';
+import { exportAdminDatabase, importAdminDatabase } from '../../api/pmoAdmin.js';
 
 export function PmoDbTools() {
   const [exportFormat, setExportFormat] = useState(''); // 'json' | 'sql'
@@ -11,6 +11,10 @@ export function PmoDbTools() {
   const [importPreview, setImportPreview] = useState([]); // [{ table, rowCount }]
   const [importError, setImportError] = useState('');
   const [importLoading, setImportLoading] = useState(false);
+  const [importPayload, setImportPayload] = useState(null); // full parsed JSON
+  const [importSubmitting, setImportSubmitting] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importResultMessage, setImportResultMessage] = useState('');
 
   const handleExport = async () => {
     if (!exportFormat) return;
@@ -44,6 +48,8 @@ export function PmoDbTools() {
     const file = event.target.files && event.target.files[0];
     setImportError('');
     setImportPreview([]);
+    setImportPayload(null);
+    setImportResultMessage('');
 
     if (!file) {
       setImportFileName('');
@@ -109,6 +115,7 @@ export function PmoDbTools() {
           }
 
           setImportPreview(tables);
+          setImportPayload(parsed);
         } catch (e) {
           console.error(e);
           setImportError('Unable to parse JSON backup file.');
@@ -126,6 +133,35 @@ export function PmoDbTools() {
       setImportError('Failed to read the selected file.');
     } finally {
       setImportLoading(false);
+    }
+  };
+
+  const handleOpenImportModal = () => {
+    if (!importPayload || !importPreview.length || importLoading || importSubmitting) return;
+    setImportModalOpen(true);
+  };
+
+  const handleConfirmImport = async () => {
+    if (!importPayload) return;
+    setImportSubmitting(true);
+    setImportResultMessage('');
+    try {
+      const res = await importAdminDatabase(importPayload);
+      const tables = res?.data?.data?.tables || [];
+      const totalRows = Array.isArray(tables)
+        ? tables.reduce((sum, t) => sum + (t.rowCount || 0), 0)
+        : 0;
+      setImportResultMessage(
+        `Import completed for ${tables.length} table${tables.length === 1 ? '' : 's'} (${totalRows} row${totalRows === 1 ? '' : 's'}).`
+      );
+      setImportModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      const apiMessage = err?.response?.data?.message || err?.response?.data?.error?.message;
+      setImportResultMessage(apiMessage || 'Import failed. Please check the backup file and try again.');
+      setImportModalOpen(false);
+    } finally {
+      setImportSubmitting(false);
     }
   };
 
@@ -224,10 +260,64 @@ export function PmoDbTools() {
         {!importError && !importPreview.length && !importLoading && (
           <Text size="sm" c="dimmed">
             Choose a JSON backup file exported from this system to see a preview of tables and row counts.
-            This preview does not modify the database.
+            You can then apply the import to the database after confirming.
           </Text>
         )}
+
+        {!importError && importPreview.length > 0 && (
+          <Group justify="flex-end" mt="sm">
+            <Button
+              size="sm"
+              color="red"
+              disabled={!importPayload || importLoading || importSubmitting}
+              loading={importSubmitting}
+              onClick={handleOpenImportModal}
+            >
+              Import to database
+            </Button>
+          </Group>
+        )}
+
+        {importResultMessage && (
+          <Alert color="blue" radius="md" variant="light" mt="sm">
+            <Text size="sm">{importResultMessage}</Text>
+          </Alert>
+        )}
       </Stack>
+
+      <Modal
+        opened={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        centered
+        withCloseButton={false}
+      >
+        <Stack gap="sm" align="stretch">
+          <Text ta="center" fw={700} size="lg">Are you sure?</Text>
+          <Text ta="center" size="sm" c="dimmed">
+            This will replace the contents of the affected tables with the data from the selected backup.
+            This action cannot be undone.
+          </Text>
+          <Group justify="center" mt="sm">
+            <Button
+              color="red"
+              onClick={handleConfirmImport}
+              loading={importSubmitting}
+            >
+              Apply import
+            </Button>
+          </Group>
+          <Group justify="center">
+            <Button
+              variant="subtle"
+              color="gray"
+              onClick={() => setImportModalOpen(false)}
+              disabled={importSubmitting}
+            >
+              Cancel
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
     </Stack>
   );
 }

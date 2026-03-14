@@ -101,3 +101,8 @@ export function exportAdminDatabase(params) {
     responseType: 'blob'
   });
 }
+
+export function importAdminDatabase(payload) {
+  // Apply a JSON backup payload to the database
+  return apiClient.post('/pmo/admin/db/import', payload);
+}

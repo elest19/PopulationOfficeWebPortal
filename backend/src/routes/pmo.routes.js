@@ -200,6 +200,98 @@ router.get(
   }
 );
 
+// POST /pmo/admin/db/import - restore database from JSON backup payload
+router.post(
+  '/admin/db/import',
+  authenticate,
+  authorize(['Admin']),
+  async (req, res, next) => {
+    const client = await db.pool.connect();
+    try {
+      const payload = req.body;
+
+      if (!payload || typeof payload !== 'object') {
+        return res.status(400).json({ success: false, message: 'Invalid import payload.' });
+      }
+
+      const tablesNode = payload.tables && typeof payload.tables === 'object'
+        ? payload.tables
+        : null;
+
+      if (!tablesNode) {
+        return res.status(400).json({ success: false, message: 'No tables found in import payload.' });
+      }
+
+      // Discover existing user tables so we only import into known tables.
+      const tablesResult = await db.pool.query(
+        `SELECT table_name
+           FROM information_schema.tables
+          WHERE table_schema = 'public'
+            AND table_type = 'BASE TABLE'
+          ORDER BY table_name ASC`
+      );
+      const existingTables = new Set(tablesResult.rows.map((r) => r.table_name).filter(Boolean));
+
+      const entries = Object.entries(tablesNode).filter(([name]) => existingTables.has(name));
+      if (!entries.length) {
+        return res.status(400).json({ success: false, message: 'None of the tables in the backup match existing database tables.' });
+      }
+
+      await client.query('BEGIN');
+
+      const summary = [];
+
+      for (const [tableName, value] of entries) {
+        let rows = [];
+        if (value && typeof value === 'object' && Array.isArray(value.rows)) {
+          rows = value.rows;
+        } else if (Array.isArray(value)) {
+          rows = value;
+        }
+
+        // Truncate the table before inserting new rows.
+        await client.query(`TRUNCATE TABLE "${tableName}" RESTART IDENTITY CASCADE`);
+
+        if (rows.length === 0) {
+          summary.push({ table: tableName, rowCount: 0 });
+          continue;
+        }
+
+        // Insert rows one-by-one using parameterized queries.
+        for (const row of rows) {
+          if (!row || typeof row !== 'object') continue;
+          const columns = Object.keys(row);
+          if (!columns.length) continue;
+
+          const colList = columns.map((c) => `"${c}"`).join(', ');
+          const placeholders = columns.map((_, idx) => `$${idx + 1}`).join(', ');
+          const values = columns.map((c) => row[c]);
+
+          await client.query(
+            `INSERT INTO "${tableName}" (${colList}) VALUES (${placeholders})`,
+            values
+          );
+        }
+
+        summary.push({ table: tableName, rowCount: rows.length });
+      }
+
+      await client.query('COMMIT');
+
+      return res.json({ success: true, data: { tables: summary } });
+    } catch (err) {
+      try {
+        await client.query('ROLLBACK');
+      } catch {
+        // ignore rollback failures
+      }
+      next(err);
+    } finally {
+      client.release();
+    }
+  }
+);
+
 // Admin DB export (JSON or SQL)
 router.get(
   '/admin/db/export',
