@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Stack, Title, Group, Select, Checkbox, Button, Divider, Text } from '@mantine/core';
+import { Stack, Title, Group, Select, Checkbox, Button, Divider, Text, Table, Alert } from '@mantine/core';
 import dayjs from 'dayjs';
 import { exportAdminDatabase } from '../../api/pmoAdmin.js';
 
@@ -7,6 +7,10 @@ export function PmoDbTools() {
   const [exportFormat, setExportFormat] = useState(''); // 'json' | 'sql'
   const [exportIncludeData, setExportIncludeData] = useState(true);
   const [exportLoading, setExportLoading] = useState(false);
+  const [importFileName, setImportFileName] = useState('');
+  const [importPreview, setImportPreview] = useState([]); // [{ table, rowCount }]
+  const [importError, setImportError] = useState('');
+  const [importLoading, setImportLoading] = useState(false);
 
   const handleExport = async () => {
     if (!exportFormat) return;
@@ -33,6 +37,66 @@ export function PmoDbTools() {
       console.error(err);
     } finally {
       setExportLoading(false);
+    }
+  };
+
+  const handleImportFileChange = async (event) => {
+    const file = event.target.files && event.target.files[0];
+    setImportError('');
+    setImportPreview([]);
+
+    if (!file) {
+      setImportFileName('');
+      return;
+    }
+
+    setImportFileName(file.name);
+
+    const isJson = file.name.toLowerCase().endsWith('.json');
+    const isSql = file.name.toLowerCase().endsWith('.sql');
+
+    setImportLoading(true);
+    try {
+      const text = await file.text();
+
+      if (isJson) {
+        try {
+          const parsed = JSON.parse(text);
+
+          const tables = [];
+
+          // Expected backup format: { tables: { [name]: rows[] } } or { [name]: rows[] }
+          const source = parsed.tables && typeof parsed.tables === 'object' ? parsed.tables : parsed;
+
+          if (source && typeof source === 'object') {
+            Object.entries(source).forEach(([tableName, rows]) => {
+              if (!Array.isArray(rows)) return;
+              tables.push({ table: tableName, rowCount: rows.length });
+            });
+          }
+
+          if (!tables.length) {
+            setImportError('No tables were detected in this JSON backup.');
+          }
+
+          setImportPreview(tables);
+        } catch (e) {
+          console.error(e);
+          setImportError('Unable to parse JSON backup file.');
+        }
+      } else if (isSql) {
+        // For SQL files, we only show a lightweight text notice for now.
+        setImportError(
+          'SQL import preview is not yet implemented. Please use a JSON backup to see table summaries.'
+        );
+      } else {
+        setImportError('Unsupported file type. Please select a .json or .sql backup file.');
+      }
+    } catch (e) {
+      console.error(e);
+      setImportError('Failed to read the selected file.');
+    } finally {
+      setImportLoading(false);
     }
   };
 
@@ -74,10 +138,67 @@ export function PmoDbTools() {
 
       <Divider />
 
-      <Text size="sm" c="dimmed">
-        Import with preview will be added here. You will be able to upload a backup file
-        and see a summary of tables and row counts before any changes are applied.
-      </Text>
+      <Stack gap="xs">
+        <Text fw={500} size="sm">Import preview</Text>
+
+        <Group align="center" gap="md">
+          <Button
+            component="label"
+            size="sm"
+            variant="outline"
+            disabled={importLoading}
+          >
+            Choose backup file
+            <input
+              type="file"
+              accept=".json,.sql,application/json,text/sql,application/sql"
+              style={{ display: 'none' }}
+              onChange={handleImportFileChange}
+            />
+          </Button>
+          <Text size="sm" c={importFileName ? undefined : 'dimmed'}>
+            {importFileName || 'No file selected'}
+          </Text>
+        </Group>
+
+        {importLoading && (
+          <Text size="sm" c="dimmed">
+            Reading backup file and building preview...
+          </Text>
+        )}
+
+        {importError && (
+          <Alert color="red" radius="md" variant="light" title="Import preview">
+            <Text size="sm">{importError}</Text>
+          </Alert>
+        )}
+
+        {!importError && importPreview.length > 0 && (
+          <Table striped withTableBorder withColumnBorders highlightOnHover fontSize="sm" verticalSpacing="xs">
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Table name</Table.Th>
+                <Table.Th style={{ textAlign: 'right', minWidth: 120 }}>Row count</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {importPreview.map((row) => (
+                <Table.Tr key={row.table}>
+                  <Table.Td>{row.table}</Table.Td>
+                  <Table.Td style={{ textAlign: 'right' }}>{row.rowCount}</Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        )}
+
+        {!importError && !importPreview.length && !importLoading && (
+          <Text size="sm" c="dimmed">
+            Choose a JSON backup file exported from this system to see a preview of tables and row counts.
+            This preview does not modify the database.
+          </Text>
+        )}
+      </Stack>
     </Stack>
   );
 }

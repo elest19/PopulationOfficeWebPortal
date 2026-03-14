@@ -110,6 +110,7 @@ function PmoSmsLogs() {
     }
   });
   const [resendLoading, setResendLoading] = useState(false);
+  const [resendAllLoading, setResendAllLoading] = useState(false);
 
   const fetchLogs = async (pageNum, currentEventFilter, currentStatusFilter) => {
     setLoading(true);
@@ -178,6 +179,42 @@ function PmoSmsLogs() {
     []
   );
 
+  const handleResendAllFailed = async () => {
+    const failedItems = items.filter((row) => !row.success);
+    if (!failedItems.length) return;
+
+    const confirmed = window.confirm(
+      `Re-send SMS for ${failedItems.length} failed log${failedItems.length > 1 ? 's' : ''}?`
+    );
+    if (!confirmed) return;
+
+    setResendAllLoading(true);
+    try {
+      for (const row of failedItems) {
+        if (!row || !row.id) continue;
+        try {
+          await resendPmoSmsLog(row.id);
+        } catch (err) {
+          console.error(err);
+        }
+      }
+
+      await fetchLogs(page, eventFilter, statusFilter);
+
+      if (typeof setSmsFailed === 'function') {
+        try {
+          const failedRes = await getPmoSmsFailedCount();
+          const count = failedRes.data?.data?.count ?? 0;
+          setSmsFailed(count);
+        } catch (e) {
+          // ignore counter refresh errors
+        }
+      }
+    } finally {
+      setResendAllLoading(false);
+    }
+  };
+
   const handleResend = async () => {
     if (!viewRow || !viewRow.id) return;
     setResendLoading(true);
@@ -236,6 +273,16 @@ function PmoSmsLogs() {
             size="xs"
             w={160}
           />
+          <Button
+            size="xs"
+            variant="outline"
+            color="red"
+            disabled={!items.some((row) => !row.success) || resendAllLoading}
+            loading={resendAllLoading}
+            onClick={handleResendAllFailed}
+          >
+            Resend all failed
+          </Button>
         </Group>
       </Group>
 
