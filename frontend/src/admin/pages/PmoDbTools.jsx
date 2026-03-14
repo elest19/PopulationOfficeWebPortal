@@ -7,7 +7,7 @@ export function PmoDbTools() {
   const [exportIncludeData, setExportIncludeData] = useState(true);
   const [exportLoading, setExportLoading] = useState(false);
   const [importFileName, setImportFileName] = useState('');
-  const [importPreview, setImportPreview] = useState([]); // [{ table, rowCount }]
+  const [importPreview, setImportPreview] = useState([]); // unused for SQL-only import
   const [importError, setImportError] = useState('');
   const [importLoading, setImportLoading] = useState(false);
   const [importPayload, setImportPayload] = useState(null); // full parsed JSON
@@ -62,71 +62,13 @@ export function PmoDbTools() {
 
     setImportFileName(file.name);
 
-    const isJson = file.name.toLowerCase().endsWith('.json');
     const isSql = file.name.toLowerCase().endsWith('.sql');
 
     setImportLoading(true);
     try {
       const text = await file.text();
 
-      if (isJson) {
-        setIsSqlImport(false);
-        setSqlImportText('');
-        try {
-          const parsed = JSON.parse(text);
-
-          const tables = [];
-
-          // Expected backup format (current backend):
-          // {
-          //   meta: { tables: [ 'Table1', 'Table2', ... ], ... },
-          //   tables: { Table1: { rows: [...] }, Table2: { rows: [...] }, ... }
-          // }
-          // Fallbacks are handled as well so this keeps working if shape evolves slightly.
-
-          const tableNamesFromMeta = Array.isArray(parsed?.meta?.tables)
-            ? parsed.meta.tables
-            : null;
-
-          const sourceTables = parsed.tables && typeof parsed.tables === 'object'
-            ? parsed.tables
-            : parsed;
-
-          if (sourceTables && typeof sourceTables === 'object') {
-            const entries = Object.entries(sourceTables);
-
-            entries.forEach(([tableName, value]) => {
-              // Handle { rows: [...] } shape
-              if (value && typeof value === 'object' && Array.isArray(value.rows)) {
-                tables.push({ table: tableName, rowCount: value.rows.length });
-                return;
-              }
-
-              // Handle direct array shape: [ row1, row2, ... ]
-              if (Array.isArray(value)) {
-                tables.push({ table: tableName, rowCount: value.length });
-              }
-            });
-          }
-
-          // If meta.tables exists but we didn't find any rows, still surface those names with 0 rows
-          if ((!tables.length) && tableNamesFromMeta) {
-            tableNamesFromMeta.forEach((name) => {
-              tables.push({ table: String(name), rowCount: 0 });
-            });
-          }
-
-          if (!tables.length) {
-            setImportError('No tables were detected in this JSON backup.');
-          }
-
-          setImportPreview(tables);
-          setImportPayload(parsed);
-        } catch (e) {
-          console.error(e);
-          setImportError('Unable to parse JSON backup file.');
-        }
-      } else if (isSql) {
+      if (isSql) {
         // For SQL files we run the script as-is; no preview is available.
         setIsSqlImport(true);
         setSqlImportText(text);
@@ -134,7 +76,7 @@ export function PmoDbTools() {
         setImportPayload(null);
         setImportError('');
       } else {
-        setImportError('Unsupported file type. Please select a .json or .sql backup file.');
+        setImportError('Unsupported file type. Please select a .sql backup file.');
       }
     } catch (e) {
       console.error(e);
@@ -273,7 +215,7 @@ export function PmoDbTools() {
             Choose backup file
             <input
               type="file"
-              accept=".json,.sql,application/json,text/sql,application/sql"
+              accept=".sql,text/sql,application/sql"
               style={{ display: 'none' }}
               onChange={handleImportFileChange}
             />
@@ -295,59 +237,24 @@ export function PmoDbTools() {
           </Alert>
         )}
 
-        {!isSqlImport && !importError && importPreview.length > 0 && (
-          <Table striped withTableBorder withColumnBorders highlightOnHover fontSize="sm" verticalSpacing="xs">
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Table name</Table.Th>
-                <Table.Th style={{ textAlign: 'right', minWidth: 120 }}>Row count</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {importPreview.map((row) => (
-                <Table.Tr key={row.table}>
-                  <Table.Td>{row.table}</Table.Td>
-                  <Table.Td style={{ textAlign: 'right' }}>{row.rowCount}</Table.Td>
-                </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
-        )}
-
-        {!isSqlImport && !importError && !importPreview.length && !importLoading && (
+        {!importError && !importPreview.length && !importLoading && (
           <Text size="sm" c="dimmed">
-            Choose a JSON backup file exported from this system to see a preview of tables and row counts.
-            You can then apply the import to the database after confirming.
+            Choose a SQL backup file exported from this system. The SQL script will be executed as-is
+            against the current database inside a single transaction.
           </Text>
         )}
 
-        {!importError && importPreview.length > 0 && (
-          <Group justify="space-between" mt="sm" align="center">
-            <Group gap="md" align="center">
-              <Text size="sm">Mode:</Text>
-              <Radio.Group
-                value={importMode}
-                onChange={setImportMode}
-                size="sm"
-                name="import-mode"
-              >
-                <Group gap="md">
-                  <Radio value="replace" label="Replace (overwrite)" />
-                  <Radio value="add" label="Add (skip duplicates)" />
-                </Group>
-              </Radio.Group>
-            </Group>
-            <Button
-              size="sm"
-              color="red"
-              disabled={!importPayload || importLoading || importSubmitting}
-              loading={importSubmitting}
-              onClick={handleOpenImportModal}
-            >
-              Import to database
-            </Button>
-          </Group>
-        )}
+        <Group justify="flex-end" mt="sm" align="center">
+          <Button
+            size="sm"
+            color="red"
+            disabled={!sqlImportText || importLoading || importSubmitting}
+            loading={importSubmitting}
+            onClick={handleOpenImportModal}
+          >
+            Import SQL to database
+          </Button>
+        </Group>
 
         {importResultMessage && (
           <Alert color="blue" radius="md" variant="light" mt="sm">
