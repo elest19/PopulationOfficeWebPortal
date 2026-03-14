@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { Stack, Title, Group, Select, Checkbox, Button, Divider, Text, Table, Alert, Modal, Radio } from '@mantine/core';
+import { Stack, Title, Group, Checkbox, Button, Divider, Text, Table, Alert, Modal, Radio } from '@mantine/core';
 import dayjs from 'dayjs';
 import { exportAdminDatabase, importAdminDatabase } from '../../api/pmoAdmin.js';
 
 export function PmoDbTools() {
-  const [exportFormat, setExportFormat] = useState(''); // 'json' | 'sql'
   const [exportIncludeData, setExportIncludeData] = useState(true);
   const [exportLoading, setExportLoading] = useState(false);
   const [importFileName, setImportFileName] = useState('');
@@ -19,17 +18,15 @@ export function PmoDbTools() {
   const [skippedPreview, setSkippedPreview] = useState(null); // { [table]: rows[] }
 
   const handleExport = async () => {
-    if (!exportFormat) return;
     setExportLoading(true);
     try {
       const res = await exportAdminDatabase({
-        format: exportFormat,
+        format: 'json',
         includeData: exportIncludeData
       });
 
       const blob = res.data;
-      const extension = exportFormat === 'sql' ? 'sql' : 'json';
-      const filename = `population-office-backup-${dayjs().format('YYYYMMDD-HHmmss')}.${extension}`;
+      const filename = `population-office-backup-${dayjs().format('YYYYMMDD-HHmmss')}.json`;
 
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -180,18 +177,7 @@ export function PmoDbTools() {
       <Stack gap="xs">
         <Text fw={500} size="sm">Export options</Text>
         <Group align="center" gap="md">
-          <Select
-            label="File type"
-            placeholder="Choose file type"
-            data={[
-              { value: 'json', label: 'JSON (.json)' },
-              { value: 'sql', label: 'SQL (.sql)' }
-            ]}
-            value={exportFormat || null}
-            onChange={(v) => setExportFormat(v || '')}
-            w={220}
-            size="sm"
-          />
+          <Text size="sm"><b>File type:</b> JSON (.json)</Text>
           <Checkbox
             label="Include data (not just structure)"
             checked={exportIncludeData}
@@ -200,7 +186,7 @@ export function PmoDbTools() {
           />
           <Button
             size="sm"
-            disabled={!exportFormat || exportLoading}
+            disabled={exportLoading}
             loading={exportLoading}
             onClick={handleExport}
           >
