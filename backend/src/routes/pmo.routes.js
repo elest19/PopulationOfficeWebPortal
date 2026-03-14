@@ -395,6 +395,77 @@ router.get(
       );
       const TABLES = tablesResult.rows.map((r) => r.table_name).filter(Boolean);
 
+      // Discover schema details: columns, primary keys, and foreign key relationships.
+      const columnsResult = await db.pool.query(
+        `SELECT table_name, column_name, data_type, is_nullable, column_default
+           FROM information_schema.columns
+          WHERE table_schema = 'public'
+          ORDER BY table_name, ordinal_position`
+      );
+
+      const pkResult = await db.pool.query(
+        `SELECT tc.table_name, kcu.column_name
+           FROM information_schema.table_constraints tc
+           JOIN information_schema.key_column_usage kcu
+             ON tc.constraint_name = kcu.constraint_name
+            AND tc.table_schema = kcu.table_schema
+          WHERE tc.table_schema = 'public'
+            AND tc.constraint_type = 'PRIMARY KEY'`
+      );
+
+      const fkResult = await db.pool.query(
+        `SELECT
+           tc.table_name,
+           kcu.column_name,
+           ccu.table_name AS foreign_table_name,
+           ccu.column_name AS foreign_column_name
+         FROM information_schema.table_constraints AS tc
+         JOIN information_schema.key_column_usage AS kcu
+           ON tc.constraint_name = kcu.constraint_name
+          AND tc.table_schema = kcu.table_schema
+         JOIN information_schema.constraint_column_usage AS ccu
+           ON ccu.constraint_name = tc.constraint_name
+          AND ccu.table_schema = tc.table_schema
+        WHERE tc.constraint_type = 'FOREIGN KEY'
+          AND tc.table_schema = 'public'`
+      );
+
+      const tableSchemas = {};
+      for (const tableName of TABLES) {
+        tableSchemas[tableName] = {
+          columns: [],
+          primaryKey: [],
+          foreignKeys: []
+        };
+      }
+
+      for (const row of columnsResult.rows) {
+        const name = row.table_name;
+        if (!tableSchemas[name]) continue;
+        tableSchemas[name].columns.push({
+          name: row.column_name,
+          dataType: row.data_type,
+          isNullable: row.is_nullable === 'YES',
+          default: row.column_default || null
+        });
+      }
+
+      for (const row of pkResult.rows) {
+        const name = row.table_name;
+        if (!tableSchemas[name]) continue;
+        tableSchemas[name].primaryKey.push(row.column_name);
+      }
+
+      for (const row of fkResult.rows) {
+        const name = row.table_name;
+        if (!tableSchemas[name]) continue;
+        tableSchemas[name].foreignKeys.push({
+          column: row.column_name,
+          referencesTable: row.foreign_table_name,
+          referencesColumn: row.foreign_column_name
+        });
+      }
+
       const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
 
       if (format === 'json') {
@@ -402,6 +473,7 @@ router.get(
 
         for (const tableName of TABLES) {
           if (!includeData) {
+            // Structure-only export: always include an empty rows array so imports remain compatible.
             tablesPayload[tableName] = { rows: [] };
             continue;
           }
@@ -421,7 +493,8 @@ router.get(
             format: 'json',
             includeData,
             exportedAt: new Date().toISOString(),
-            tables: TABLES
+            tables: TABLES,
+            tableSchemas
           },
           tables: tablesPayload
         };
