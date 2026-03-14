@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Stack, Title, Group, Select, Checkbox, Button, Divider, Text, Table, Alert, Modal } from '@mantine/core';
+import { Stack, Title, Group, Select, Checkbox, Button, Divider, Text, Table, Alert, Modal, Radio } from '@mantine/core';
 import dayjs from 'dayjs';
 import { exportAdminDatabase, importAdminDatabase } from '../../api/pmoAdmin.js';
 
@@ -15,6 +15,8 @@ export function PmoDbTools() {
   const [importSubmitting, setImportSubmitting] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [importResultMessage, setImportResultMessage] = useState('');
+  const [importMode, setImportMode] = useState('replace'); // 'replace' | 'add'
+  const [skippedPreview, setSkippedPreview] = useState(null); // { [table]: rows[] }
 
   const handleExport = async () => {
     if (!exportFormat) return;
@@ -50,6 +52,7 @@ export function PmoDbTools() {
     setImportPreview([]);
     setImportPayload(null);
     setImportResultMessage('');
+    setSkippedPreview(null);
 
     if (!file) {
       setImportFileName('');
@@ -145,15 +148,20 @@ export function PmoDbTools() {
     if (!importPayload) return;
     setImportSubmitting(true);
     setImportResultMessage('');
+    setSkippedPreview(null);
     try {
-      const res = await importAdminDatabase(importPayload);
-      const tables = res?.data?.data?.tables || [];
+      const res = await importAdminDatabase({ ...importPayload, mode: importMode });
+      const { mode, tables, skipped } = res?.data?.data || {};
+      const importTables = Array.isArray(tables) ? tables : [];
       const totalRows = Array.isArray(tables)
         ? tables.reduce((sum, t) => sum + (t.rowCount || 0), 0)
         : 0;
       setImportResultMessage(
-        `Import completed for ${tables.length} table${tables.length === 1 ? '' : 's'} (${totalRows} row${totalRows === 1 ? '' : 's'}).`
+        `Import (${mode || importMode}) completed for ${importTables.length} table${importTables.length === 1 ? '' : 's'} (${totalRows} row${totalRows === 1 ? '' : 's'} inserted).`
       );
+      if (mode === 'add' && skipped && typeof skipped === 'object') {
+        setSkippedPreview(skipped);
+      }
       setImportModalOpen(false);
     } catch (err) {
       console.error(err);
@@ -200,6 +208,38 @@ export function PmoDbTools() {
           </Button>
         </Group>
       </Stack>
+
+      {skippedPreview && importMode === 'add' && (
+        <Stack mt="md" gap="xs">
+          <Text fw={500} size="sm">Skipped rows (duplicates)</Text>
+          <Text size="xs" c="dimmed">
+            The following sample rows were skipped during add-mode import because records with matching keys already exist.
+          </Text>
+          {Object.entries(skippedPreview).map(([tableName, rows]) => (
+            <Stack key={tableName} gap={4}>
+              <Text size="sm" fw={500}>{tableName}</Text>
+              <Table withTableBorder withColumnBorders fontSize="xs" verticalSpacing={2}>
+                <Table.Thead>
+                  <Table.Tr>
+                    {rows && rows[0] && Object.keys(rows[0]).map((col) => (
+                      <Table.Th key={col}>{col}</Table.Th>
+                    ))}
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {rows.slice(0, 3).map((row, idx) => (
+                    <Table.Tr key={idx}>
+                      {Object.keys(rows[0]).map((col) => (
+                        <Table.Td key={col}>{String(row[col] ?? '')}</Table.Td>
+                      ))}
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            </Stack>
+          ))}
+        </Stack>
+      )}
 
       <Divider />
 
@@ -265,7 +305,21 @@ export function PmoDbTools() {
         )}
 
         {!importError && importPreview.length > 0 && (
-          <Group justify="flex-end" mt="sm">
+          <Group justify="space-between" mt="sm" align="center">
+            <Group gap="md" align="center">
+              <Text size="sm">Mode:</Text>
+              <Radio.Group
+                value={importMode}
+                onChange={setImportMode}
+                size="sm"
+                name="import-mode"
+              >
+                <Group gap="md">
+                  <Radio value="replace" label="Replace (overwrite)" />
+                  <Radio value="add" label="Add (skip duplicates)" />
+                </Group>
+              </Radio.Group>
+            </Group>
             <Button
               size="sm"
               color="red"
