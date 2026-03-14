@@ -243,7 +243,6 @@ router.get('/events', validate(eventsSchema), async (req, res, next) => {
            NULL::text AS requester_name
          FROM announcements a
         WHERE a.date BETWEEN $1::date AND $2::date
-          AND a.status <> 'ARCHIVED'
 
          UNION ALL
 
