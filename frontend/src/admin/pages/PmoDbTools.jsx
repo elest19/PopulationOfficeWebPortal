@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Stack, Title, Group, Checkbox, Button, Divider, Text, Table, Alert, Modal, Radio } from '@mantine/core';
 import dayjs from 'dayjs';
 import { exportAdminDatabase, importAdminDatabase } from '../../api/pmoAdmin.js';
@@ -16,6 +16,7 @@ export function PmoDbTools() {
   const [importResultMessage, setImportResultMessage] = useState('');
   const [importMode, setImportMode] = useState('replace'); // 'replace' | 'add'
   const [skippedPreview, setSkippedPreview] = useState(null); // { [table]: rows[] }
+  const [importProgressIndex, setImportProgressIndex] = useState(0);
 
   const handleExport = async () => {
     setExportLoading(true);
@@ -156,6 +157,25 @@ export function PmoDbTools() {
       setImportSubmitting(false);
     }
   };
+
+  useEffect(() => {
+    if (!importSubmitting || !importPreview.length) return undefined;
+
+    setImportProgressIndex(0);
+
+    const intervalId = setInterval(() => {
+      setImportProgressIndex((prev) => {
+        if (prev >= importPreview.length - 1) {
+          return prev;
+        }
+        return prev + 1;
+      });
+    }, 800);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [importSubmitting, importPreview]);
 
   return (
     <Stack>
@@ -346,6 +366,11 @@ export function PmoDbTools() {
             This will replace the contents of the affected tables with the data from the selected backup.
             This action cannot be undone.
           </Text>
+          {importSubmitting && importPreview.length > 0 && (
+            <Text ta="center" size="sm">
+              Importing table {importProgressIndex + 1} of {importPreview.length}: {importPreview[importProgressIndex]?.table}
+            </Text>
+          )}
           <Group justify="center" mt="sm">
             <Button
               color="red"
