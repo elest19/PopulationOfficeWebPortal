@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Stack, Title, Group, Checkbox, Button, Divider, Text, Table, Alert, Modal, Radio } from '@mantine/core';
+import { Stack, Title, Group, Checkbox, Button, Divider, Text, Table, Alert, Modal, Radio, ScrollArea, Accordion } from '@mantine/core';
 import dayjs from 'dayjs';
 import { exportAdminDatabase, importAdminDatabase } from '../../api/pmoAdmin.js';
 
@@ -208,29 +208,43 @@ export function PmoDbTools() {
           <Text size="xs" c="dimmed">
             The following sample rows were skipped during add-mode import because records with matching keys already exist.
           </Text>
-          {Object.entries(skippedPreview).map(([tableName, rows]) => (
-            <Stack key={tableName} gap={4}>
-              <Text size="sm" fw={500}>{tableName}</Text>
-              <Table withTableBorder withColumnBorders fontSize="xs" verticalSpacing={2}>
-                <Table.Thead>
-                  <Table.Tr>
-                    {rows && rows[0] && Object.keys(rows[0]).map((col) => (
-                      <Table.Th key={col}>{col}</Table.Th>
-                    ))}
-                  </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {rows.slice(0, 3).map((row, idx) => (
-                    <Table.Tr key={idx}>
-                      {Object.keys(rows[0]).map((col) => (
-                        <Table.Td key={col}>{String(row[col] ?? '')}</Table.Td>
-                      ))}
-                    </Table.Tr>
-                  ))}
-                </Table.Tbody>
-              </Table>
-            </Stack>
-          ))}
+          <Accordion variant="contained" radius="md">
+            {Object.entries(skippedPreview).map(([tableName, rows]) => (
+              <Accordion.Item key={tableName} value={tableName}>
+                <Accordion.Control>
+                  <Text size="sm" fw={500}>{tableName}</Text>
+                </Accordion.Control>
+                <Accordion.Panel>
+                  <ScrollArea h={180} type="always">
+                    <Table
+                      withTableBorder
+                      withColumnBorders
+                      fontSize="xs"
+                      verticalSpacing={2}
+                      style={{ minWidth: 600 }}
+                    >
+                      <Table.Thead>
+                        <Table.Tr>
+                          {rows && rows[0] && Object.keys(rows[0]).map((col) => (
+                            <Table.Th key={col}>{col}</Table.Th>
+                          ))}
+                        </Table.Tr>
+                      </Table.Thead>
+                      <Table.Tbody>
+                        {rows.slice(0, 3).map((row, idx) => (
+                          <Table.Tr key={idx}>
+                            {Object.keys(rows[0]).map((col) => (
+                              <Table.Td key={col}>{String(row[col] ?? '')}</Table.Td>
+                            ))}
+                          </Table.Tr>
+                        ))}
+                      </Table.Tbody>
+                    </Table>
+                  </ScrollArea>
+                </Accordion.Panel>
+              </Accordion.Item>
+            ))}
+          </Accordion>
         </Stack>
       )}
 
@@ -272,29 +286,31 @@ export function PmoDbTools() {
         )}
 
         {!importError && importPreview.length > 0 && (
-          <Table
-            striped
-            withTableBorder
-            withColumnBorders
-            highlightOnHover
-            fontSize="sm"
-            verticalSpacing="xs"
-          >
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Table name</Table.Th>
-                <Table.Th style={{ textAlign: 'right', minWidth: 120 }}>Row count</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {importPreview.map((row) => (
-                <Table.Tr key={row.table}>
-                  <Table.Td>{row.table}</Table.Td>
-                  <Table.Td style={{ textAlign: 'right' }}>{row.rowCount}</Table.Td>
+          <ScrollArea h={260} type="always">
+            <Table
+              striped
+              withTableBorder
+              withColumnBorders
+              highlightOnHover
+              fontSize="sm"
+              verticalSpacing="xs"
+            >
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Table name</Table.Th>
+                  <Table.Th style={{ textAlign: 'right', minWidth: 120 }}>Row count</Table.Th>
                 </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
+              </Table.Thead>
+              <Table.Tbody>
+                {importPreview.map((row) => (
+                  <Table.Tr key={row.table}>
+                    <Table.Td>{row.table}</Table.Td>
+                    <Table.Td style={{ textAlign: 'right' }}>{row.rowCount}</Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </ScrollArea>
         )}
 
         {!importError && !importPreview.length && !importLoading && (
