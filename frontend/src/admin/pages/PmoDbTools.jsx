@@ -251,6 +251,32 @@ export function PmoDbTools() {
           </Alert>
         )}
 
+        {!importError && importPreview.length > 0 && (
+          <Table
+            striped
+            withTableBorder
+            withColumnBorders
+            highlightOnHover
+            fontSize="sm"
+            verticalSpacing="xs"
+          >
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Table name</Table.Th>
+                <Table.Th style={{ textAlign: 'right', minWidth: 120 }}>Row count</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {importPreview.map((row) => (
+                <Table.Tr key={row.table}>
+                  <Table.Td>{row.table}</Table.Td>
+                  <Table.Td style={{ textAlign: 'right' }}>{row.rowCount}</Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        )}
+
         {!importError && !importPreview.length && !importLoading && (
           <Text size="sm" c="dimmed">
             Choose a JSON backup file exported from this system to see a preview of tables and row counts.
