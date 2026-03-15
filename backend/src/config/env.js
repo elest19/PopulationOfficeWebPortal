@@ -22,7 +22,7 @@ const config = {
   jwt: {
     secret: process.env.JWT_SECRET,
     refreshSecret: process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
-    accessTokenTtl: process.env.JWT_ACCESS_TTL || '15m',
+    accessTokenTtl: process.env.JWT_ACCESS_TTL || '5h',
     refreshTokenTtl: process.env.JWT_REFRESH_TTL || '7d'
   },
   drive: {
