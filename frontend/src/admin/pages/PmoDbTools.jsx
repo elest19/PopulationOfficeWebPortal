@@ -317,9 +317,8 @@ export function PmoDbTools() {
           </div>
           <Text ta="center" fw={700} size="lg">Are you sure?</Text>
           <Text ta="center" size="sm" c="dimmed">
-            {isSqlImport
-              ? 'This will execute the uploaded SQL script directly against the current database inside a single transaction. Make sure you are using a test database before proceeding.'
-              : 'This will replace the contents of the affected tables with the data from the selected backup. This action cannot be undone.'}
+            This will replace the contents of the affected tables with the data from the selected backup.
+            This action cannot be undone.
           </Text>
           <Group justify="center" mt="sm">
             <Button
