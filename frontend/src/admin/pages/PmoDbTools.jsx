@@ -13,6 +13,7 @@ export function PmoDbTools() {
   const [importPayload, setImportPayload] = useState(null); // full parsed JSON
   const [importSubmitting, setImportSubmitting] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importSuccessModalOpen, setImportSuccessModalOpen] = useState(false);
   const [importResultMessage, setImportResultMessage] = useState('');
   const [importMode, setImportMode] = useState('replace'); // 'replace' | 'add'
   const [skippedPreview, setSkippedPreview] = useState(null); // { [table]: rows[] }
@@ -140,13 +141,13 @@ export function PmoDbTools() {
       const totalRows = Array.isArray(tables)
         ? tables.reduce((sum, t) => sum + (t.rowCount || 0), 0)
         : 0;
-      setImportResultMessage(
-        `Import (${mode || importMode}) completed for ${importTables.length} table${importTables.length === 1 ? '' : 's'} (${totalRows} row${totalRows === 1 ? '' : 's'} inserted).`
-      );
+      const summaryMessage = `Import (${mode || importMode}) completed for ${importTables.length} table${importTables.length === 1 ? '' : 's'} (${totalRows} row${totalRows === 1 ? '' : 's'} inserted).`;
+      setImportResultMessage(summaryMessage);
       if (mode === 'add' && skipped && typeof skipped === 'object') {
         setSkippedPreview(skipped);
       }
       setImportModalOpen(false);
+      setImportSuccessModalOpen(true);
     } catch (err) {
       console.error(err);
       const apiMessage = err?.response?.data?.message || err?.response?.data?.error?.message;
@@ -385,6 +386,45 @@ export function PmoDbTools() {
               disabled={importSubmitting}
             >
               Cancel
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      <Modal
+        opened={importSuccessModalOpen}
+        onClose={() => setImportSuccessModalOpen(false)}
+        centered
+      >
+        <Stack gap="sm" align="stretch">
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}>
+            <div
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: '999px',
+                backgroundColor: '#dcfce7',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <span style={{ fontSize: 32, lineHeight: 1, color: '#16a34a' }}>✓</span>
+            </div>
+          </div>
+          <Text ta="center" fw={700} size="lg">Import completed</Text>
+          {importResultMessage && (
+            <Text ta="center" size="sm" c="dimmed">
+              {importResultMessage}
+            </Text>
+          )}
+          <Group justify="center" mt="sm">
+            <Button
+              color="green"
+              fullWidth
+              onClick={() => setImportSuccessModalOpen(false)}
+            >
+              Close
             </Button>
           </Group>
         </Stack>
