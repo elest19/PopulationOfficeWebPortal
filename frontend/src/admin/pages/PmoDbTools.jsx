@@ -211,7 +211,7 @@ export function PmoDbTools() {
                         </Table.Tr>
                       </Table.Thead>
                       <Table.Tbody>
-                        {rows.slice(0, 3).map((row, idx) => (
+                        {rows.map((row, idx) => (
                           <Table.Tr key={idx}>
                             {Object.keys(rows[0]).map((col) => (
                               <Table.Td key={col}>{String(row[col] ?? '')}</Table.Td>
