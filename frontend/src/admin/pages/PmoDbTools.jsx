@@ -15,6 +15,7 @@ export function PmoDbTools() {
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [importSuccessModalOpen, setImportSuccessModalOpen] = useState(false);
   const [importResultMessage, setImportResultMessage] = useState('');
+  const [addedPreview, setAddedPreview] = useState([]); // [{ table, rowCount }]
   const [skippedPreview, setSkippedPreview] = useState(null); // { [table]: rows[] }
 
   const handleExport = async () => {
@@ -50,6 +51,7 @@ export function PmoDbTools() {
     setImportPayload(null);
     setImportResultMessage('');
     setSkippedPreview(null);
+    setAddedPreview([]);
 
     if (!file) {
       setImportFileName('');
@@ -142,6 +144,7 @@ export function PmoDbTools() {
         : 0;
       const summaryMessage = `Import (${mode || 'add'}) completed for ${importTables.length} table${importTables.length === 1 ? '' : 's'} (${totalRows} row${totalRows === 1 ? '' : 's'} inserted).`;
       setImportResultMessage(summaryMessage);
+      setAddedPreview(importTables);
       if (mode === 'add' && skipped && typeof skipped === 'object') {
         setSkippedPreview(skipped);
       }
@@ -181,6 +184,40 @@ export function PmoDbTools() {
           </Button>
         </Group>
       </Stack>
+
+      {addedPreview.length > 0 && (
+        <Stack mt="md" gap="xs">
+          <Text fw={500} size="sm">Successfully added</Text>
+          <Text size="xs" c="dimmed">
+            The following tables had rows inserted during the last import.
+          </Text>
+          <ScrollArea h={220} type="always">
+            <Table
+              striped
+              withTableBorder
+              withColumnBorders
+              highlightOnHover
+              fontSize="sm"
+              verticalSpacing="xs"
+            >
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Table name</Table.Th>
+                  <Table.Th style={{ textAlign: 'right', minWidth: 140 }}>Rows inserted</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {addedPreview.map((row) => (
+                  <Table.Tr key={row.table}>
+                    <Table.Td>{row.table}</Table.Td>
+                    <Table.Td style={{ textAlign: 'right' }}>{row.rowCount || 0}</Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </ScrollArea>
+        </Stack>
+      )}
 
       {skippedPreview && (
         <Stack mt="md" gap="xs">
@@ -265,7 +302,7 @@ export function PmoDbTools() {
           </Alert>
         )}
 
-        {!importError && importPreview.length > 0 && (
+        {!importError && importPreview.length > 0 && !addedPreview.length && (
           <ScrollArea h={260} type="always">
             <Table
               striped
@@ -300,7 +337,7 @@ export function PmoDbTools() {
           </Text>
         )}
 
-        {!importError && importPreview.length > 0 && (
+        {!importError && importPreview.length > 0 && !addedPreview.length && (
           <Group justify="space-between" mt="sm" align="center">
             <Text size="sm">Mode: <b>Add (skip duplicates)</b></Text>
             <Button
