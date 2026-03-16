@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Stack, Title, Group, Checkbox, Button, Divider, Text, Table, Alert, Modal, Radio, ScrollArea, Accordion } from '@mantine/core';
+import { Stack, Title, Group, Checkbox, Button, Divider, Text, Table, Alert, Modal, ScrollArea, Accordion } from '@mantine/core';
 import dayjs from 'dayjs';
 import { exportAdminDatabase, importAdminDatabase } from '../../api/pmoAdmin.js';
 
@@ -15,7 +15,6 @@ export function PmoDbTools() {
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [importSuccessModalOpen, setImportSuccessModalOpen] = useState(false);
   const [importResultMessage, setImportResultMessage] = useState('');
-  const [importMode, setImportMode] = useState('replace'); // 'replace' | 'add'
   const [skippedPreview, setSkippedPreview] = useState(null); // { [table]: rows[] }
 
   const handleExport = async () => {
@@ -135,13 +134,13 @@ export function PmoDbTools() {
     setImportResultMessage('');
     setSkippedPreview(null);
     try {
-      const res = await importAdminDatabase({ ...importPayload, mode: importMode });
+      const res = await importAdminDatabase({ ...importPayload, mode: 'add' });
       const { mode, tables, skipped } = res?.data?.data || {};
       const importTables = Array.isArray(tables) ? tables : [];
       const totalRows = Array.isArray(tables)
         ? tables.reduce((sum, t) => sum + (t.rowCount || 0), 0)
         : 0;
-      const summaryMessage = `Import (${mode || importMode}) completed for ${importTables.length} table${importTables.length === 1 ? '' : 's'} (${totalRows} row${totalRows === 1 ? '' : 's'} inserted).`;
+      const summaryMessage = `Import (${mode || 'add'}) completed for ${importTables.length} table${importTables.length === 1 ? '' : 's'} (${totalRows} row${totalRows === 1 ? '' : 's'} inserted).`;
       setImportResultMessage(summaryMessage);
       if (mode === 'add' && skipped && typeof skipped === 'object') {
         setSkippedPreview(skipped);
@@ -183,7 +182,7 @@ export function PmoDbTools() {
         </Group>
       </Stack>
 
-      {skippedPreview && importMode === 'add' && (
+      {skippedPreview && (
         <Stack mt="md" gap="xs">
           <Text fw={500} size="sm">Skipped rows (duplicates)</Text>
           <Text size="xs" c="dimmed">
@@ -303,20 +302,7 @@ export function PmoDbTools() {
 
         {!importError && importPreview.length > 0 && (
           <Group justify="space-between" mt="sm" align="center">
-            <Group gap="md" align="center">
-              <Text size="sm">Mode:</Text>
-              <Radio.Group
-                value={importMode}
-                onChange={setImportMode}
-                size="sm"
-                name="import-mode"
-              >
-                <Group gap="md">
-                  <Radio value="replace" label="Replace (overwrite)" />
-                  <Radio value="add" label="Add (skip duplicates)" />
-                </Group>
-              </Radio.Group>
-            </Group>
+            <Text size="sm">Mode: <b>Add (skip duplicates)</b></Text>
             <Button
               size="sm"
               color="red"
@@ -360,8 +346,8 @@ export function PmoDbTools() {
           </div>
           <Text ta="center" fw={700} size="lg">Are you sure?</Text>
           <Text ta="center" size="sm" c="dimmed">
-            This will replace the contents of the affected tables with the data from the selected backup.
-            This action cannot be undone.
+            This will add data from the selected backup into the existing tables and skip rows that already exist
+            based on primary keys. This action cannot be undone.
           </Text>
           {importSubmitting && (
             <Text ta="center" size="sm">
