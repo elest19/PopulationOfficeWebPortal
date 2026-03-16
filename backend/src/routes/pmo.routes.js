@@ -91,7 +91,7 @@ const adminScheduleUpdateSchema = {
 router.get('/questionnaire', async (req, res, next) => {
   try {
     const result = await db.query(
-      'SELECT "questionID", question_text, question_type, parent_question_id, sort_order FROM "PMO_Questionnaire" ORDER BY sort_order ASC, "questionID" ASC'
+      'SELECT "questionID", question_text, question_type, parent_question_id, sort_order FROM "PMO_Questionnaire" WHERE COALESCE(is_invisible,false) = false ORDER BY sort_order ASC, "questionID" ASC'
     );
     res.json({ success: true, data: result.rows });
   } catch (err) {
@@ -1232,7 +1232,8 @@ const adminQuestionSchema = {
     question_text: Joi.string().required(),
     question_type: Joi.string().valid('Standalone', 'Filler', 'Sub-question').required(),
     parent_question_id: Joi.number().integer().min(1).allow(null),
-    sort_order: Joi.number().integer().min(0).default(0)
+    sort_order: Joi.number().integer().min(0).default(0),
+    is_invisible: Joi.boolean().default(false)
   })
 };
 
@@ -1289,7 +1290,7 @@ router.get('/questionnaire', async (req, res, next) => {
 router.get('/admin/questionnaire', authenticate, authorize(['Admin']), async (req, res, next) => {
   try {
     const result = await db.query(
-      'SELECT "questionID", question_text, question_type, parent_question_id, sort_order FROM "PMO_Questionnaire" ORDER BY sort_order ASC, "questionID" ASC'
+      'SELECT "questionID", question_text, question_type, parent_question_id, sort_order, COALESCE(is_invisible,false) AS is_invisible FROM "PMO_Questionnaire" ORDER BY sort_order ASC, "questionID" ASC'
     );
     res.json({ success: true, data: result.rows });
   } catch (err) {
@@ -1305,7 +1306,7 @@ router.post(
   async (req, res, next) => {
     const client = await db.pool.connect();
     try {
-      const { question_text, question_type } = req.body;
+      const { question_text, question_type, is_invisible } = req.body;
       let { parent_question_id, sort_order } = req.body;
 
       if (question_type === 'Sub-question') {
@@ -1328,10 +1329,10 @@ router.post(
       const resolvedSortOrder = await nextFreeSortOrder(client, parent_question_id, sort_order, null);
 
       const result = await client.query(
-        `INSERT INTO "PMO_Questionnaire" (question_text, question_type, parent_question_id, sort_order)
-         VALUES ($1,$2,$3,$4)
-         RETURNING "questionID", question_text, question_type, parent_question_id, sort_order`,
-        [question_text, question_type, parent_question_id || null, resolvedSortOrder]
+        `INSERT INTO "PMO_Questionnaire" (question_text, question_type, parent_question_id, sort_order, is_invisible)
+         VALUES ($1,$2,$3,$4,$5)
+         RETURNING "questionID", question_text, question_type, parent_question_id, sort_order, COALESCE(is_invisible,false) AS is_invisible`,
+        [question_text, question_type, parent_question_id || null, resolvedSortOrder, is_invisible]
       );
 
       await client.query('COMMIT');
@@ -1358,7 +1359,7 @@ router.put(
     const client = await db.pool.connect();
     try {
       const { id } = req.params;
-      const { question_text, question_type } = req.body;
+      const { question_text, question_type, is_invisible } = req.body;
       let { parent_question_id, sort_order } = req.body;
 
       const existing = await client.query('SELECT 1 FROM "PMO_Questionnaire" WHERE "questionID" = $1', [id]);
@@ -1390,10 +1391,11 @@ router.put(
          SET question_text = $1,
              question_type = $2,
              parent_question_id = $3,
-             sort_order = $4
-         WHERE "questionID" = $5
-         RETURNING "questionID", question_text, question_type, parent_question_id, sort_order`,
-        [question_text, question_type, parent_question_id || null, resolvedSortOrder, id]
+             sort_order = $4,
+             is_invisible = $5
+         WHERE "questionID" = $6
+         RETURNING "questionID", question_text, question_type, parent_question_id, sort_order, COALESCE(is_invisible,false) AS is_invisible`,
+        [question_text, question_type, parent_question_id || null, resolvedSortOrder, is_invisible, id]
       );
 
       await client.query('COMMIT');

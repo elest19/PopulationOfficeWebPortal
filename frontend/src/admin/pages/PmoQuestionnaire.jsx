@@ -11,18 +11,17 @@ export function PmoQuestionnaire() {
   const [editing, setEditing] = useState(null);
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState([]);
-  const [deleteId, setDeleteId] = useState(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
   const [form, setForm] = useState({
     question_text: '',
     question_type: 'Standalone',
     parent_question_id: null,
-    sort_order: 0
+    sort_order: 0,
+    is_invisible: false
   });
 
   const resetForm = () => {
     setEditing(null);
-    setForm({ question_text: '', question_type: 'Standalone', parent_question_id: null, sort_order: 0 });
+    setForm({ question_text: '', question_type: 'Standalone', parent_question_id: null, sort_order: 0, is_invisible: false });
   };
 
   const fillerOptions = useMemo(() => {
@@ -118,7 +117,8 @@ export function PmoQuestionnaire() {
       question_text: q.question_text,
       question_type: q.question_type,
       parent_question_id: q.parent_question_id ?? null,
-      sort_order: q.sort_order
+      sort_order: q.sort_order,
+      is_invisible: Boolean(q.is_invisible)
     });
     setModalOpen(true);
   };
@@ -145,9 +145,6 @@ export function PmoQuestionnaire() {
           <Group gap="xs" wrap="nowrap">
             <Button size="xs" variant="light" onClick={() => openEdit(q)}>
               Edit
-            </Button>
-            <Button size="xs" color="red" variant="light" onClick={() => setDeleteId(q.questionID)}>
-              Delete
             </Button>
           </Group>
         </Group>
@@ -227,10 +224,31 @@ export function PmoQuestionnaire() {
               value={form.parent_question_id ? String(form.parent_question_id) : null}
               onChange={(v) => setForm((f) => ({ ...f, parent_question_id: v ? Number(v) : null }))}
             />
-            <TextInput
-              label="Sort order"
-              value={String(form.sort_order)}
-              onChange={(e) => setForm((f) => ({ ...f, sort_order: Number(e.currentTarget.value || 0) }))}
+            <Select
+              label="Sort order / visibility"
+              data={[
+                { value: 'invisible', label: 'Invisible (hide from questionnaire)' },
+                { value: '0', label: '0' },
+                { value: '1', label: '1' },
+                { value: '2', label: '2' },
+                { value: '3', label: '3' },
+                { value: '4', label: '4' },
+                { value: '5', label: '5' },
+                { value: '6', label: '6' },
+                { value: '7', label: '7' },
+                { value: '8', label: '8' },
+                { value: '9', label: '9' },
+                { value: '10', label: '10' }
+              ]}
+              value={form.is_invisible ? 'invisible' : String(form.sort_order)}
+              onChange={(v) => {
+                if (v === 'invisible') {
+                  setForm((f) => ({ ...f, is_invisible: true }));
+                } else {
+                  const nextOrder = Number(v || 0);
+                  setForm((f) => ({ ...f, sort_order: nextOrder, is_invisible: false }));
+                }
+              }}
             />
             <Group justify="flex-end">
               <Button
