@@ -91,7 +91,7 @@ const adminScheduleUpdateSchema = {
 router.get('/questionnaire', async (req, res, next) => {
   try {
     const result = await db.query(
-      'SELECT "questionID", question_text, question_type, parent_question_id, sort_order FROM "PMO_Questionnaire" ORDER BY sort_order ASC, "questionID" ASC'
+      'SELECT "questionID", question_text, question_type, parent_question_id, sort_order FROM "PMO_Questionnaire" WHERE COALESCE(is_archived,false) = false ORDER BY sort_order ASC, "questionID" ASC'
     );
     res.json({ success: true, data: result.rows });
   } catch (err) {
@@ -1289,7 +1289,18 @@ router.get('/questionnaire', async (req, res, next) => {
 router.get('/admin/questionnaire', authenticate, authorize(['Admin']), async (req, res, next) => {
   try {
     const result = await db.query(
-      'SELECT "questionID", question_text, question_type, parent_question_id, sort_order FROM "PMO_Questionnaire" ORDER BY sort_order ASC, "questionID" ASC'
+      'SELECT "questionID", question_text, question_type, parent_question_id, sort_order FROM "PMO_Questionnaire" WHERE COALESCE(is_archived,false) = false ORDER BY sort_order ASC, "questionID" ASC'
+    );
+    res.json({ success: true, data: result.rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/admin/questionnaire/archived', authenticate, authorize(['Admin']), async (req, res, next) => {
+  try {
+    const result = await db.query(
+      'SELECT "questionID", question_text, question_type, parent_question_id, sort_order FROM "PMO_Questionnaire" WHERE COALESCE(is_archived,false) = true ORDER BY sort_order ASC, "questionID" ASC'
     );
     res.json({ success: true, data: result.rows });
   } catch (err) {
@@ -1414,7 +1425,10 @@ router.put(
 router.delete('/admin/questionnaire/:id', authenticate, authorize(['Admin']), async (req, res, next) => {
   try {
     const { id } = req.params;
-    const result = await db.query('DELETE FROM "PMO_Questionnaire" WHERE "questionID" = $1', [id]);
+    const result = await db.query(
+      'UPDATE "PMO_Questionnaire" SET is_archived = true WHERE "questionID" = $1',
+      [id]
+    );
     if (result.rowCount === 0) {
       return res.status(404).json({ success: false, error: { message: 'Question not found' } });
     }
