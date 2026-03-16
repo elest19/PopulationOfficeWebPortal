@@ -2,9 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Stack, Title, Text, Group, Button, Modal, TextInput, Select, Loader, Center, Box } from '@mantine/core';
 import { showNotification } from '@mantine/notifications';
 
-import { createPmoAdminQuestion, deletePmoAdminQuestion, getPmoAdminQuestionnaire, updatePmoAdminQuestion } from '../../api/pmoAdmin.js';
+import { createPmoAdminQuestion, getPmoAdminQuestionnaire, updatePmoAdminQuestion } from '../../api/pmoAdmin.js';
 import { socket } from '../../socket.js';
-import { DeleteConfirmModal } from '../../components/common/DeleteConfirmModal.jsx';
 
 export function PmoQuestionnaire() {
   const [modalOpen, setModalOpen] = useState(false);
@@ -265,28 +264,6 @@ export function PmoQuestionnaire() {
           </Stack>
         </form>
       </Modal>
-
-      <DeleteConfirmModal
-        opened={deleteId != null}
-        onCancel={() => { if (!deleteLoading) setDeleteId(null); }}
-        onConfirm={async () => {
-          if (!deleteId) return;
-          setDeleteLoading(true);
-          try {
-            await deletePmoAdminQuestion(deleteId);
-            await load();
-            setDeleteId(null);
-          } catch (e) {
-            const msg = e?.response?.data?.error?.message || 'Failed to delete question';
-            showNotification({ title: 'Error', message: msg, color: 'red' });
-          } finally {
-            setDeleteLoading(false);
-          }
-        }}
-        confirmLabel="Delete question"
-        message="This action cannot be undone. The selected question will be removed from the questionnaire."
-        loading={deleteLoading}
-      />
     </Stack>
   );
 }
