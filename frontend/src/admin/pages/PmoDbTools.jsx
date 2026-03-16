@@ -15,7 +15,7 @@ export function PmoDbTools() {
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [importSuccessModalOpen, setImportSuccessModalOpen] = useState(false);
   const [importResultMessage, setImportResultMessage] = useState('');
-  const [addedPreview, setAddedPreview] = useState([]); // [{ table, rowCount }]
+  const [addedPreview, setAddedPreview] = useState([]); // [{ table, rowCount, rows }]
   const [skippedPreview, setSkippedPreview] = useState(null); // { [table]: rows[] }
 
   const handleExport = async () => {
@@ -144,7 +144,23 @@ export function PmoDbTools() {
         : 0;
       const summaryMessage = `Import (${mode || 'add'}) completed for ${importTables.length} table${importTables.length === 1 ? '' : 's'} (${totalRows} row${totalRows === 1 ? '' : 's'} inserted).`;
       setImportResultMessage(summaryMessage);
-      setAddedPreview(importTables);
+      const addedWithRows = importTables
+        .filter((t) => (t.rowCount || 0) > 0)
+        .map((t) => {
+          const tableName = t.table;
+          const sourceTables = importPayload?.tables && typeof importPayload.tables === 'object'
+            ? importPayload.tables
+            : importPayload;
+          const source = sourceTables && sourceTables[tableName];
+          let rows = [];
+          if (source && typeof source === 'object' && Array.isArray(source.rows)) {
+            rows = source.rows;
+          } else if (Array.isArray(source)) {
+            rows = source;
+          }
+          return { ...t, rows };
+        });
+      setAddedPreview(addedWithRows);
       if (mode === 'add' && skipped && typeof skipped === 'object') {
         setSkippedPreview(skipped);
       }
@@ -191,31 +207,48 @@ export function PmoDbTools() {
           <Text size="xs" c="dimmed">
             The following tables had rows inserted during the last import.
           </Text>
-          <ScrollArea h={220} type="always">
-            <Table
-              striped
-              withTableBorder
-              withColumnBorders
-              highlightOnHover
-              fontSize="sm"
-              verticalSpacing="xs"
-            >
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Table name</Table.Th>
-                  <Table.Th style={{ textAlign: 'right', minWidth: 140 }}>Rows inserted</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {addedPreview.map((row) => (
-                  <Table.Tr key={row.table}>
-                    <Table.Td>{row.table}</Table.Td>
-                    <Table.Td style={{ textAlign: 'right' }}>{row.rowCount || 0}</Table.Td>
-                  </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
-          </ScrollArea>
+          <Accordion variant="contained" radius="md">
+            {addedPreview.map((table) => (
+              <Accordion.Item key={table.table} value={table.table}>
+                <Accordion.Control>
+                  <Group justify="space-between" gap="sm" wrap="nowrap">
+                    <Text size="sm" fw={500}>{table.table}</Text>
+                    <Text size="xs" c="dimmed">
+                      {table.rowCount || 0} row{(table.rowCount || 0) === 1 ? '' : 's'} inserted
+                    </Text>
+                  </Group>
+                </Accordion.Control>
+                <Accordion.Panel>
+                  <ScrollArea h={220} type="always">
+                    <Table
+                      withTableBorder
+                      withColumnBorders
+                      fontSize="xs"
+                      verticalSpacing={2}
+                      style={{ minWidth: 600 }}
+                    >
+                      <Table.Thead>
+                        <Table.Tr>
+                          {table.rows && table.rows[0] && Object.keys(table.rows[0]).map((col) => (
+                            <Table.Th key={col}>{col}</Table.Th>
+                          ))}
+                        </Table.Tr>
+                      </Table.Thead>
+                      <Table.Tbody>
+                        {table.rows && table.rows.map((row, idx) => (
+                          <Table.Tr key={idx}>
+                            {table.rows[0] && Object.keys(table.rows[0]).map((col) => (
+                              <Table.Td key={col}>{String(row[col] ?? '')}</Table.Td>
+                            ))}
+                          </Table.Tr>
+                        ))}
+                      </Table.Tbody>
+                    </Table>
+                  </ScrollArea>
+                </Accordion.Panel>
+              </Accordion.Item>
+            ))}
+          </Accordion>
         </Stack>
       )}
 
