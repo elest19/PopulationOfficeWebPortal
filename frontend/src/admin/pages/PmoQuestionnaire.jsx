@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Stack, Title, Text, Group, Button, Modal, TextInput, Select, Loader, Center, Box } from '@mantine/core';
 import { showNotification } from '@mantine/notifications';
 
-import { createPmoAdminQuestion, deletePmoAdminQuestion, getPmoAdminQuestionnaire, getPmoAdminQuestionnaireArchived, updatePmoAdminQuestion } from '../../api/pmoAdmin.js';
+import { createPmoAdminQuestion, deletePmoAdminQuestion, getPmoAdminQuestionnaire, updatePmoAdminQuestion } from '../../api/pmoAdmin.js';
 import { socket } from '../../socket.js';
 import { DeleteConfirmModal } from '../../components/common/DeleteConfirmModal.jsx';
 
@@ -11,7 +11,6 @@ export function PmoQuestionnaire() {
   const [editing, setEditing] = useState(null);
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState([]);
-  const [archivedView, setArchivedView] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [form, setForm] = useState({
@@ -53,10 +52,10 @@ export function PmoQuestionnaire() {
     return () => socket.off('pmo:updated', handler);
   }, []);
 
-  const load = async (viewArchived = false) => {
+  const load = async () => {
     setLoading(true);
     try {
-      const res = viewArchived ? await getPmoAdminQuestionnaireArchived() : await getPmoAdminQuestionnaire();
+      const res = await getPmoAdminQuestionnaire();
       setRows(res.data.data || []);
     } catch (e) {
       setRows([]);
@@ -66,8 +65,8 @@ export function PmoQuestionnaire() {
   };
 
   useEffect(() => {
-    load(archivedView);
-  }, [archivedView]);
+    load();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -109,7 +108,6 @@ export function PmoQuestionnaire() {
   }, [rows]);
 
   const openAdd = () => {
-    if (archivedView) return;
     resetForm();
     setModalOpen(true);
   };
@@ -168,23 +166,17 @@ export function PmoQuestionnaire() {
       <Group justify="space-between" align="center">
         <Title order={2}>PMO - Questionnaire</Title>
         <Group gap="xs">
-          <Button size="xs" variant={archivedView ? 'default' : 'filled'} onClick={() => setArchivedView(false)}>
-            Active
-          </Button>
-          <Button size="xs" variant={archivedView ? 'filled' : 'default'} onClick={() => setArchivedView(true)}>
-            Archived
-          </Button>
-          <Button size="xs" onClick={openAdd} disabled={archivedView}>Add Question</Button>
+          <Button size="xs" onClick={openAdd}>Add Question</Button>
         </Group>
       </Group>
-      <Text c="dimmed">Manage PMO questionnaire items ({archivedView ? 'archived' : 'active'}).</Text>
+      <Text c="dimmed">Manage PMO questionnaire items.</Text>
 
       {loading ? (
         <Center>
           <Loader size="sm" />
         </Center>
       ) : rows.length === 0 ? (
-        <Text size="sm" c="dimmed">No {archivedView ? 'archived' : 'active'} questions found.</Text>
+        <Text size="sm" c="dimmed">No questions found.</Text>
       ) : (
         <Stack gap={10}>
           {(byParent.get(null) || []).map((q) => renderNode(q, 0, false))}
@@ -264,7 +256,7 @@ export function PmoQuestionnaire() {
           setDeleteLoading(true);
           try {
             await deletePmoAdminQuestion(deleteId);
-            await load(archivedView);
+            await load();
             setDeleteId(null);
           } catch (e) {
             const msg = e?.response?.data?.error?.message || 'Failed to delete question';
@@ -273,8 +265,8 @@ export function PmoQuestionnaire() {
             setDeleteLoading(false);
           }
         }}
-        confirmLabel="Archive question"
-        message="This will archive the selected question so it no longer appears in the active questionnaire. You can view it in the Archived tab."
+        confirmLabel="Delete question"
+        message="This action cannot be undone. The selected question will be removed from the questionnaire."
         loading={deleteLoading}
       />
     </Stack>

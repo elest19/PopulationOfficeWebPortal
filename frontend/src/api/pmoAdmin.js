@@ -37,10 +37,6 @@ export function getPmoAdminQuestionnaire() {
   return apiClient.get('/pmo/admin/questionnaire');
 }
 
-export function getPmoAdminQuestionnaireArchived() {
-  return apiClient.get('/pmo/admin/questionnaire/archived');
-}
-
 // Public read-only questionnaire for MEIF preview in services
 export function getPmoQuestionnairePublic() {
   return apiClient.get('/pmo/questionnaire');
