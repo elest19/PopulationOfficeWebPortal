@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Stack, Title, Text, Group, Button, Modal, TextInput, Select, Loader, Center, Box } from '@mantine/core';
+import { Stack, Title, Text, Group, Button, Modal, TextInput, Select, Loader, Center, Box, Checkbox } from '@mantine/core';
 import { showNotification } from '@mantine/notifications';
 
 import { createPmoAdminQuestion, getPmoAdminQuestionnaire, updatePmoAdminQuestion } from '../../api/pmoAdmin.js';
@@ -224,9 +224,8 @@ export function PmoQuestionnaire() {
               onChange={(v) => setForm((f) => ({ ...f, parent_question_id: v ? Number(v) : null }))}
             />
             <Select
-              label="Sort order / visibility"
+              label="Sort order"
               data={[
-                { value: 'invisible', label: 'Invisible (hide from questionnaire)' },
                 { value: '0', label: '0' },
                 { value: '1', label: '1' },
                 { value: '2', label: '2' },
@@ -239,15 +238,18 @@ export function PmoQuestionnaire() {
                 { value: '9', label: '9' },
                 { value: '10', label: '10' }
               ]}
-              value={form.is_invisible ? 'invisible' : String(form.sort_order)}
+              value={String(form.sort_order)}
               onChange={(v) => {
-                if (v === 'invisible') {
-                  setForm((f) => ({ ...f, is_invisible: true }));
-                } else {
-                  const nextOrder = Number(v || 0);
-                  setForm((f) => ({ ...f, sort_order: nextOrder, is_invisible: false }));
-                }
+                const nextOrder = Number(v || 0);
+                setForm((f) => ({ ...f, sort_order: nextOrder }));
               }}
+            />
+            <Checkbox
+              label="Invisible (hide from questionnaire and make optional)"
+              checked={form.is_invisible}
+              onChange={(event) =>
+                setForm((f) => ({ ...f, is_invisible: event.currentTarget.checked }))
+              }
             />
             <Group justify="flex-end">
               <Button
