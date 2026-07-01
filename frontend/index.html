@@ -24,7 +24,8 @@
       :root {
         --sf-font: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
       }
-      html, body { font-family: var(--sf-font); }
+      html, body { font-family: var(--sf-font); overflow-x: clip; max-width: 100%; }
+      *, *::before, *::after { box-sizing: border-box; }
       h1, h2, h3, h4, h5, h6 { font-weight: 700; }
       .nav-link { font-weight: 500; }
       .navbar-nav .nav-link { padding-left: 0.75rem; padding-right: 0.75rem; letter-spacing: 0.2px; }

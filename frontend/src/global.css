@@ -1,3 +1,180 @@
+/* ------------------------------------------------------------------ */
+/* Responsive base: mobile-first layout helpers                       */
+/* ------------------------------------------------------------------ */
+
+html {
+  overflow-x: clip;
+}
+
+body {
+  overflow-x: clip;
+  max-width: 100%;
+}
+
+img,
+video,
+iframe {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Prevent accidental horizontal page scroll from wide content */
+.container,
+.container-fluid {
+  max-width: 100%;
+}
+
+@media (max-width: 575.98px) {
+  .container,
+  .container-fluid {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .display-5 {
+    font-size: clamp(1.5rem, 6vw, 2.5rem);
+  }
+
+  .lead {
+    font-size: 1rem;
+  }
+}
+
+/* Touch-friendly controls on small screens */
+@media (max-width: 767.98px) {
+  .btn:not(.btn-link):not(.rounded-circle),
+  .mantine-Button-root:not([data-variant='subtle']):not([data-variant='transparent']) {
+    min-height: 44px;
+  }
+
+  .btn-sm:not(.btn-link):not(.rounded-circle) {
+    min-height: 38px;
+  }
+
+  .holographic-card:hover {
+    transform: none;
+  }
+
+  button:hover,
+  input[type='button']:hover,
+  input[type='submit']:hover,
+  .btn:hover,
+  .mantine-Button-root:hover,
+  .card.holographic-card:hover {
+    transform: none;
+  }
+}
+
+/* Navbar brand truncation on narrow screens */
+.navbar-brand {
+  min-width: 0;
+  max-width: calc(100vw - 88px);
+}
+
+.navbar-brand span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: clamp(0.72rem, 2.8vw, 1rem);
+}
+
+/* Responsive news thumbnails */
+.news-thumb {
+  width: 220px;
+  height: 140px;
+  object-fit: contain;
+}
+
+@media (max-width: 575.98px) {
+  .news-thumb {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 10;
+  }
+}
+
+/* Admin dashboard: horizontal scroll for wide tables */
+.admin-main-panel .mantine-Table-root {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-main-panel .mantine-Table-table {
+  min-width: 640px;
+}
+
+@media (max-width: 767.98px) {
+  .admin-main-panel {
+    padding: 0.75rem !important;
+  }
+}
+
+/* Responsive table wrapper utility */
+.table-responsive-scroll {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-responsive-scroll > table,
+.table-responsive-scroll .mantine-Table-table {
+  min-width: 600px;
+}
+
+/* Mantine modals on small screens */
+@media (max-width: 575.98px) {
+  .mantine-Modal-content {
+    max-width: calc(100vw - 1rem) !important;
+    margin-inline: 0.5rem;
+  }
+
+  .mantine-Modal-inner {
+    padding-inline: 0.25rem;
+  }
+}
+
+/* Floating action buttons: avoid overlap on very small screens */
+@media (max-width: 575.98px) {
+  .sf-fab-help {
+    bottom: 72px !important;
+    left: 12px !important;
+    width: 40px !important;
+    height: 40px !important;
+    font-size: 18px !important;
+  }
+
+  .sf-fab-top {
+    bottom: 12px !important;
+    right: 12px !important;
+    width: 40px !important;
+    height: 40px !important;
+    font-size: 16px !important;
+  }
+}
+
+/* Service page sidebar width */
+@media (max-width: 991.98px) {
+  .service-sidebar-float {
+    width: 100% !important;
+    float: none !important;
+    margin-left: 0 !important;
+  }
+}
+
+/* Calendar page responsive padding */
+@media (max-width: 767.98px) {
+  .calendar-page-stack {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+}
+
 /* Global holographic card hover effect */
 
 .holographic-card {

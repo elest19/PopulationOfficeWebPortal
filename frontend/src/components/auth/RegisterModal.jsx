@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Modal, Button } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { showNotification } from '@mantine/notifications';
+import { useMediaQuery } from '@mantine/hooks';
 
 import { registerRequest } from '../../api/auth.js';
 import PopcomLogo from '../../content/POPCOM-Logo.jpg';
@@ -27,6 +28,7 @@ function validateContactNumber(value) {
 
 export function RegisterModal({ opened, onClose, onOpenLogin, defaultRole = 'User', lockRole = false }) {
   const [submitting, setSubmitting] = useState(false);
+  const isCompact = useMediaQuery('(max-width: 767px)');
 
   const barangayOptions = useMemo(() => BARANGAYS.map((b) => ({ value: b, label: b })), []);
 
@@ -108,10 +110,11 @@ export function RegisterModal({ opened, onClose, onOpenLogin, defaultRole = 'Use
       onClose={onClose}
       centered
       withCloseButton={false}
-      size="auto"
+      size={isCompact ? '100%' : 'auto'}
+      fullScreen={isCompact}
       styles={{
         content: {
-          maxWidth: '900px',
+          maxWidth: isCompact ? '100%' : '900px',
           width: '100%',
         },
         body: {

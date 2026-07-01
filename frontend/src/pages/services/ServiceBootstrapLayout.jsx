@@ -3,12 +3,14 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Modal, TextInput, Select, Radio, Textarea, Button, Group, Text } from '@mantine/core';
 import { DatePickerInput } from '@mantine/dates';
 import { showNotification } from '@mantine/notifications';
+import { useMediaQuery } from '@mantine/hooks';
 import dayjs from 'dayjs';
 
 import { submitClientSatisfactionFeedback } from '../../api/feedback.js';
 
 export function ServiceBootstrapLayout({ title, imageUrl, imageAlt, showBack = true, children }) {
   const navigate = useNavigate();
+  const isCompact = useMediaQuery('(max-width: 991px)');
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
   const [feedbackValues, setFeedbackValues] = useState({
@@ -217,7 +219,7 @@ export function ServiceBootstrapLayout({ title, imageUrl, imageAlt, showBack = t
     <section className="py-4 bg-white">
       <div className="container">
         {/* Float sidebar on the right for large screens so main text can flow underneath */}
-        <aside className="d-none d-lg-block float-lg-end ms-lg-4" style={{ width: "35%" }}>
+        <aside className="d-none d-lg-block float-lg-end ms-lg-4 service-sidebar-float" style={{ width: '35%' }}>
           <div className="vstack gap-3">
             <div className="card shadow-sm">
               <div className="card-body">
@@ -365,7 +367,8 @@ export function ServiceBootstrapLayout({ title, imageUrl, imageAlt, showBack = t
         title={
           <h5 className="mb-0 fw-bold">Client Satisfaction Measurement (CSM) Form</h5>
         }
-        size="xl"
+        size={isCompact ? '100%' : 'xl'}
+        fullScreen={isCompact}
         centered
       >
         <form onSubmit={handleFeedbackSubmit} className="fs-6">

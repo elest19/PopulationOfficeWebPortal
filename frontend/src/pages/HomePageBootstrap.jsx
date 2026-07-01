@@ -378,7 +378,7 @@ export function HomePage() {
                   Serving the people of San Fabian with accurate population data, responsible parenthood programs,
                   and community development initiatives.
                 </p>
-                <div className="d-flex gap-2">
+                <div className="d-flex flex-column flex-sm-row gap-2">
                   <button className="btn btn-primary btn-lg" onClick={() => navigate('/services')}>Explore Services</button>
                   <button className="btn btn-outline-primary btn-lg" onClick={() => navigate('/contact')}>Contact Us</button>
                 </div>
@@ -390,7 +390,7 @@ export function HomePage() {
               <div
                 id="heroServicesCarousel"
                 className="carousel slide carousel-fade shadow-sm rounded overflow-hidden"
-                style={{ maxHeight: '380px', height: '100%' }}
+                style={{ maxHeight: '380px', minHeight: '220px', height: '100%' }}
               >
                 <div className="carousel-inner">
                   {heroSlides.map((slide, idx) => (
@@ -456,13 +456,12 @@ export function HomePage() {
                 <div className="list-group list-group-flush">
                   {mappedNews.map((n) => (
                     <article key={n.id} className="py-4 border-bottom">
-                      <div className="d-flex gap-3 gap-md-4">
+                      <div className="d-flex flex-column flex-sm-row gap-3 gap-md-4">
                         {n.imageUrl && (
                           <img
                             src={n.imageUrl}
                             alt={n.title}
-                            className="rounded-2 flex-shrink-0 shadow-sm"
-                            style={{ width: 220, height: 140, objectFit: 'contain' }}
+                            className="rounded-2 flex-shrink-0 shadow-sm news-thumb"
                           />
                         )}
                         <div className="flex-grow-1">

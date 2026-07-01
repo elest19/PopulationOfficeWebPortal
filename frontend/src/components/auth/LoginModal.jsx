@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Modal, Button } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { showNotification } from '@mantine/notifications';
+import { useMediaQuery } from '@mantine/hooks';
 
 import { useAuth } from '../../context/AuthContext.jsx';
 import { startPasswordReset, verifyPasswordReset, completePasswordReset } from '../../api/auth.js';
@@ -37,6 +38,7 @@ function maskIdentifier(raw) {
 
 export function LoginModal({ opened, onClose, redirectTo, onOpenRegister }) {
   const { login } = useAuth();
+  const isCompact = useMediaQuery('(max-width: 767px)');
   const [mode, setMode] = useState('login');
   const [submitting, setSubmitting] = useState(false);
   const [identifier, setIdentifier] = useState('');
@@ -186,10 +188,11 @@ export function LoginModal({ opened, onClose, redirectTo, onOpenRegister }) {
       onClose={onClose}
       centered
       withCloseButton={false}
-      size="auto"
+      size={isCompact ? '100%' : 'auto'}
+      fullScreen={isCompact}
       styles={{
         content: {
-          maxWidth: '900px',
+          maxWidth: isCompact ? '100%' : '900px',
           width: '100%',
         },
         body: {

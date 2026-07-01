@@ -627,7 +627,7 @@ export function CalendarPage() {
   };
 
   return (
-    <Stack spacing="lg" px="lg">
+    <Stack spacing="lg" px="lg" className="calendar-page-stack">
     <Title order={1} className="hover-underline">Schedule of Activities</Title>
       {/* Mobile month controls */}
       {isMobile && (
@@ -681,7 +681,7 @@ export function CalendarPage() {
       <Divider />
       <Stack gap="xs">
         <Group wrap="wrap" justify="space-between" align="center" gap="xs">
-          <Group wrap="wrap" gap="xs" align="stretch">
+          <Group wrap="wrap" gap="xs" align="stretch" style={{ width: '100%' }}>
             <Select
               placeholder="Location"
               data={locationOptions}
@@ -690,7 +690,7 @@ export function CalendarPage() {
               searchable
               clearable
               nothingFoundMessage="No locations"
-              style={{ minWidth: 180 }}
+              style={{ minWidth: isMobile ? '100%' : 180, flex: isMobile ? '1 1 100%' : undefined }}
             />
             <Select
               placeholder="Select Event Type"
@@ -699,7 +699,7 @@ export function CalendarPage() {
               onChange={setTypeFilter}
               searchable
               clearable
-              style={{ minWidth: 200 }}
+              style={{ minWidth: isMobile ? '100%' : 200, flex: isMobile ? '1 1 100%' : undefined }}
             />
             <Select
               placeholder="Status"
@@ -707,7 +707,7 @@ export function CalendarPage() {
               value={statusFilter}
               onChange={setStatusFilter}
               clearable
-              style={{ minWidth: 160 }}
+              style={{ minWidth: isMobile ? '100%' : 160, flex: isMobile ? '1 1 100%' : undefined }}
             />
           </Group>
 
@@ -739,9 +739,9 @@ export function CalendarPage() {
         </Center>
       )}
 
-      <Group align="flex-start" wrap="nowrap">
+      <Group align="flex-start" wrap={isMobile ? 'wrap' : 'nowrap'}>
         {/* List */}
-        <Stack style={{ flex: 1 }} gap="sm">
+        <Stack style={{ flex: 1, minWidth: 0, width: isMobile ? '100%' : undefined }} gap="sm">
           {/* Make the list area fill the viewport minus the footer height so pagination stays just above footer */}
           <Box style={{ minHeight: `calc(100vh - ${LAYOUT_FOOTER_HEIGHT}px)` }}>
             <Stack gap="sm">
@@ -782,8 +782,8 @@ export function CalendarPage() {
                   styles={{ root: { padding: 0, height: 'auto', justifyContent: 'stretch' }, inner: { width: '100%' }, label: { width: '100%' } }}
                 >
                   <Box style={{ width: '100%', border: `1px solid ${theme.colors.gray[3]}`, borderRadius: 10, padding: 12, background: theme.white }}>
-                    <Group justify="space-between" align="center" wrap="nowrap">
-                      <Group gap="md" wrap="nowrap" align="center">
+                    <Group justify="space-between" align={isMobile ? 'flex-start' : 'center'} wrap={isMobile ? 'wrap' : 'nowrap'} gap="sm">
+                      <Group gap="md" wrap="wrap" align="center" style={{ minWidth: 0, flex: 1 }}>
                         <Box style={{ width: 48, height: 48, borderRadius: 999, background: theme.colors[typeColor][1], display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
                           {initials}
                         </Box>

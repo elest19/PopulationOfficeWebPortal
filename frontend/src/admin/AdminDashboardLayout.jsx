@@ -319,8 +319,8 @@ function AdminDashboardLayout() {
 
         <div className="col-12 col-md-9 col-lg-10">
           <div
-            className="bg-white shadow-sm rounded-4 h-100 p-3"
-            style={{ maxHeight: '100%', overflowY: 'auto' }}
+            className="bg-white shadow-sm rounded-4 h-100 p-3 admin-main-panel"
+            style={{ maxHeight: '100%', overflowY: 'auto', overflowX: 'hidden' }}
           >
             {isMobile && (
               <div className="d-flex justify-content-between align-items-center mb-3">

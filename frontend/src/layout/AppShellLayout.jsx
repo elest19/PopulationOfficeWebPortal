@@ -41,8 +41,6 @@ export function AppShellLayout({ children }) {
 
   const hasShownLandingLoginRef = useRef(false);
 
-  const isMobile = useMediaQuery('(max-width: 768px)');
-  // Match Bootstrap's lg breakpoint (navbar uses d-none d-lg-block)
   const isCompactNav = useMediaQuery('(max-width: 991px)');
 
   const headerHeight = 64;
@@ -313,7 +311,7 @@ export function AppShellLayout({ children }) {
         <nav className="navbar navbar-expand-lg sticky-top bg-white">
           <div className="container d-flex align-items-center justify-content-between">
             <Link className="navbar-brand d-flex align-items-center gap-2" to="/">
-              <img src={popcomLogo} width="32" height="32" className="rounded" />
+              <img src={popcomLogo} width="32" height="32" className="rounded flex-shrink-0" alt="POPCOM logo" />
               <span className="fw-semibold">San Fabian Population Office</span>
             </Link>
 
@@ -441,7 +439,7 @@ export function AppShellLayout({ children }) {
           opened={mobileNavOpened}
           onClose={() => { setMobileNavOpened(false); setMobileServicesOpen(false); }}
           position="left"
-          size="60%"
+          size={isCompactNav ? '85%' : '60%'}
           padding="md"
           title="San Fabian Population Office"
         >
@@ -516,21 +514,19 @@ export function AppShellLayout({ children }) {
             {user && !isAdmin && (
               <button
                 type="button"
-                className="btn btn-outline-secondary btn-sm text-center"
+                className="btn btn-outline-secondary btn-sm w-100"
                 onClick={() => {
                   setMobileNavOpened(false);
                   setMobileServicesOpen(false);
                   setProfileModalOpened(true);
                 }}
-                style={{ width: '40%' }}
               >
                 {isOfficer ? 'Officer Profile' : 'Profile'}
               </button>
             )}
             <button
               type="button"
-              className="btn btn-primary btn-sm mt-2 text-center"
-
+              className="btn btn-primary btn-sm mt-2 w-100"
               onClick={() => {
                 setMobileNavOpened(false);
                 setMobileServicesOpen(false);
@@ -540,7 +536,6 @@ export function AppShellLayout({ children }) {
                   setLoginModalOpened(true);
                 }
               }}
-              style={{ width: '40%' }}
             >
               {user ? 'Logout' : 'Login'}
             </button>
@@ -562,8 +557,8 @@ export function AppShellLayout({ children }) {
                   <img
                     src={popcomBanner}
                     alt="Commission on Population and Development (POPCOM) banner"
-                    className="img-fluid w-60"
-                    style={{ maxHeight: 200, objectFit: 'cover', padding: '1rem'}}
+                    className="img-fluid w-100"
+                    style={{ maxHeight: 200, objectFit: 'contain', padding: '0.5rem 0' }}
                   />
                 </div>
               </div>
@@ -619,7 +614,7 @@ export function AppShellLayout({ children }) {
         <button
           type="button"
           onClick={() => { setHelpSlide(0); setHelpModalOpened(true); }}
-          className="btn btn-primary rounded-circle shadow"
+          className="btn btn-primary rounded-circle shadow sf-fab-help"
           style={{
             position: 'fixed',
             bottom: '20px',
@@ -643,7 +638,7 @@ export function AppShellLayout({ children }) {
       <button
         type="button"
         onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-        className="btn btn-primary rounded-circle shadow"
+        className="btn btn-primary rounded-circle shadow sf-fab-top"
         style={{
           position: 'fixed',
           bottom: '20px',
@@ -681,7 +676,8 @@ export function AppShellLayout({ children }) {
         opened={helpModalOpened}
         onClose={() => setHelpModalOpened(false)}
         title={manualPages[helpSlide]?.title || 'System Manual'}
-        size="lg"
+        size={isCompactNav ? '100%' : 'lg'}
+        fullScreen={isCompactNav}
         centered
         scrollAreaComponent={ScrollArea.Autosize}
       >
